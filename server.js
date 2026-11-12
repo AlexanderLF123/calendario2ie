@@ -2,10 +2,13 @@ const http = require('http');
 const fs = require('fs/promises');
 const path = require('path');
 
-const PORT = Number(process.env.PORT || 8080);
+const rawPort = process.env.PORT;
+const parsedPort = Number(rawPort);
+const PORT = (!isNaN(parsedPort) && parsedPort > 0 && parsedPort < 65536) ? parsedPort : 8080;
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const DATA_DIR = process.env.INSPECCIONES_DATA_DIR || path.join(ROOT, 'data');
+const defaultDataDir = path.join(ROOT, 'data');
+const DATA_DIR = (process.env.INSPECCIONES_DATA_DIR && process.env.INSPECCIONES_DATA_DIR.trim()) || defaultDataDir;
 const DB_FILE = path.join(DATA_DIR, 'inspecciones.json');
 
 const DEFAULT_STATE = {
