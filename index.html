@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-title" content="Inspecciones">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231B2B4B' width='100' height='100' rx='20'/><text x='50' y='62' font-size='48' text-anchor='middle' fill='white'>📋</text></svg>">
 <title>Calendario de Inspecciones</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
@@ -358,6 +361,231 @@ body::after{
   #connMonitor{font-size:9px;padding:3px 7px;bottom:8px;left:8px}
   #connDot{width:6px;height:6px}
 }
+
+/* ===================== CONTROL DE EXPEDIENTES ===================== */
+#expedientesPanel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  padding: 14px 18px;
+  gap: 12px;
+}
+#expedientesPanel.active-tab {
+  display: flex;
+}
+.exp-toolbar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 4px var(--shadow);
+}
+.exp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.exp-input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.exp-input:focus {
+  border-color: var(--c1);
+}
+.exp-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.exp-legend {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.leg-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.leg-sin { background: #ef4444; }
+.leg-proc { background: #facc15; }
+.leg-aten { background: #22c55e; }
+
+.exp-table-wrap {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 1px 4px var(--shadow);
+}
+.exp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.exp-table th {
+  position: sticky;
+  top: 0;
+  background: var(--navy);
+  color: #fff;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--navy2);
+  z-index: 10;
+  white-space: nowrap;
+}
+.exp-table td {
+  border: 1px solid var(--border);
+  padding: 4px 6px;
+  vertical-align: top;
+  background: var(--surface);
+  color: var(--text);
+}
+.exp-table tr:hover td {
+  background: rgba(59, 130, 246, 0.04);
+}
+.exp-table td.col-fecha {
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(0,0,0,0.02);
+  width: 105px;
+}
+.exp-cell-area {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.exp-badge-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(0,0,0,0.12);
+  margin-bottom: 2px;
+}
+.exp-badge-sin {
+  background: #fecaca;
+  color: #991b1b;
+  border-color: #f87171;
+}
+.exp-badge-proc {
+  background: #fef08a;
+  color: #854d0e;
+  border-color: #facc15;
+}
+.exp-badge-aten {
+  background: #bbf7d0;
+  color: #166534;
+  border-color: #4ade80;
+}
+.badge-del {
+  cursor: pointer;
+  opacity: 0.6;
+  font-weight: bold;
+  padding: 0 2px;
+}
+.badge-del:hover {
+  opacity: 1;
+  color: #dc2626;
+}
+.exp-quick-add {
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 4px;
+  font-size: 10px;
+  padding: 2px 4px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  margin-top: 2px;
+}
+.exp-quick-add:hover {
+  background: var(--c1l);
+  color: var(--c1);
+  border-color: var(--c1);
+}
+.status-select-cell {
+  width: 100%;
+  padding: 3px 5px;
+  font-size: 11px;
+  border-radius: 4px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.status-sin { background: #fee2e2; color: #b91c1c; border-color: #f87171; }
+.status-proc { background: #fef9c3; color: #a16207; border-color: #facc15; }
+.status-aten { background: #dcfce7; color: #15803d; border-color: #4ade80; }
+
+/* Modal Histograma */
+#modalHisto {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+#modalHisto.open {
+  display: flex;
+}
+.histo-box {
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 90%;
+  max-width: 820px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+@media print {
+  .header, .exp-toolbar, .exp-quick-add, .badge-del, .hbtns, .btn {
+    display: none !important;
+  }
+  #expedientesPanel {
+    padding: 0;
+  }
+  .exp-table-wrap {
+    overflow: visible;
+    border: none;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -420,12 +648,131 @@ document.getElementById('waterDrop').addEventListener('click', function(){
     </div>
   </div>
   <div class="hbtns">
+    
+    <button class="btn btn-ghost btn-sm main-tab-btn active" id="btnTabCal" onclick="switchMainTab('cal')">📅 Calendario</button>
+    <button class="btn btn-amber btn-sm main-tab-btn" id="btnTabExp" onclick="switchMainTab('exp')">📁 Expedientes</button>
     <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
     <button class="btn btn-ghost btn-sm" onclick="openModal()">⚙️ Conductores</button>
     <button class="btn btn-ghost btn-sm" onclick="openReuniones()">📋 Reuniones</button>
     <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📥 CSV</button>
     <button class="btn btn-amber btn-sm" onclick="window.print()">🖨️ Imprimir</button>
     <button class="btn btn-ghost btn-sm" onclick="logout()" title="Cerrar sesión">🚪</button>
+  </div>
+</div>
+
+
+<!-- EXPEDIENTES PANEL -->
+<div id="expedientesPanel">
+  <div class="exp-toolbar">
+    <div class="exp-filters">
+      <span style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:4px">🔍 Filtros:</span>
+      <input type="text" id="filtroExpNum" class="exp-input" placeholder="Por N° Exp (ej. 1386)" style="width:170px" oninput="filtrarExpedientes()">
+      <select id="filtroExpEstado" class="exp-input" onchange="filtrarExpedientes()">
+        <option value="">Todos los Estados</option>
+        <option value="Sin atender">🔴 Sin atender</option>
+        <option value="En proceso">🟡 En proceso</option>
+        <option value="Atendido">🟢 Atendido</option>
+      </select>
+      <select id="filtroExpPersona" class="exp-input" onchange="filtrarExpedientes()">
+        <option value="">Todo el Personal</option>
+        <option value="0">Luis Zanabría Valderrama</option>
+        <option value="1">Leonardo Sea Ordaya</option>
+        <option value="2">Mac Aguirre Ilizarbe</option>
+        <option value="3">Mary Castrillon</option>
+        <option value="4">Genessis Lescano Figueroa</option>
+        <option value="5">Steven Mamani Tito</option>
+        <option value="6">Rosalía Gonzales Relaisa</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" style="border:1px solid var(--border);color:var(--text)" onclick="limpiarFiltrosExp()">✖ Limpiar</button>
+    </div>
+
+    <div class="exp-actions">
+      <div class="exp-legend">
+        <span><span class="leg-dot leg-sin"></span>Sin atender</span>
+        <span><span class="leg-dot leg-proc"></span>En proceso</span>
+        <span><span class="leg-dot leg-aten"></span>Atendido</span>
+      </div>
+      <button class="btn btn-navy btn-sm" onclick="abrirAgregarFilaModal()">➕ Agregar Fecha</button>
+      <button class="btn btn-ghost btn-sm" style="border:1px solid var(--border);color:var(--text)" onclick="abrirHistograma()">📊 Histograma</button>
+      <button class="btn btn-success btn-sm" onclick="exportarExpedientesExcel()">📥 Excel</button>
+      <button class="btn btn-amber btn-sm" onclick="imprimirExpedientesPDF()">🖨️ PDF / Imprimir</button>
+    </div>
+  </div>
+
+  <div class="exp-table-wrap">
+    <table class="exp-table" id="tablaExpedientes">
+      <thead>
+        <tr>
+          <th style="width:110px">Fecha</th>
+          <th>Luis Zanabría Valderrama</th>
+          <th>Leonardo Sea Ordaya</th>
+          <th>Mac Aguirre Ilizarbe</th>
+          <th>Mary Castrillon</th>
+          <th>Genessis Lescano Figueroa</th>
+          <th>Steven Mamani Tito</th>
+          <th>Rosalía Gonzales Relaisa</th>
+          <th style="width:130px">Estado Global</th>
+          <th style="width:40px">🗑️</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyExpedientes">
+        <!-- Generado dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL AGREGAR EXPEDIENTE A CELDA -->
+<div id="modalAddExp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);color:var(--text);border-radius:var(--radius);padding:18px;width:340px;box-shadow:0 8px 24px rgba(0,0,0,0.3)">
+    <h3 style="font-size:14px;margin-bottom:10px" id="addExpTitle">Agregar Expediente</h3>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">N° Expediente:</label>
+      <input type="text" id="inputExpNumero" class="exp-input" placeholder="ej. 1386-2026" style="width:100%">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Estado individual:</label>
+      <select id="selectExpEstado" class="exp-input" style="width:100%">
+        <option value="Sin atender">🔴 Sin atender</option>
+        <option value="En proceso">🟡 En proceso</option>
+        <option value="Atendido">🟢 Atendido</option>
+      </select>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarAddExpModal()" style="border:1px solid var(--border);color:var(--text)">Cancelar</button>
+      <button class="btn btn-navy btn-sm" onclick="guardarAddExpModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVA FECHA -->
+<div id="modalNuevaFecha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);color:var(--text);border-radius:var(--radius);padding:18px;width:320px;box-shadow:0 8px 24px rgba(0,0,0,0.3)">
+    <h3 style="font-size:14px;margin-bottom:10px">Agregar Nueva Fecha</h3>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Seleccione fecha:</label>
+      <input type="date" id="inputNuevaFechaVal" class="exp-input" style="width:100%">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarNuevaFechaModal()" style="border:1px solid var(--border);color:var(--text)">Cancelar</button>
+      <button class="btn btn-navy btn-sm" onclick="guardarNuevaFechaModal()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTOGRAMA -->
+<div id="modalHisto">
+  <div class="histo-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px">
+      <h3 style="font-size:16px">📊 Histograma de Expedientes por Personal y Estado</h3>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarHistograma()" style="border:1px solid var(--border);color:var(--text)">✕ Cerrar</button>
+    </div>
+    <div style="position:relative;height:360px;width:100%">
+      <canvas id="histoChartCanvas"></canvas>
+    </div>
+    <div id="histoStats" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;text-align:center">
+      <!-- Metricas -->
+    </div>
   </div>
 </div>
 
@@ -2680,7 +3027,503 @@ async function initApp(){
     }).catch(function(){});
   },30000);
 }
+
+// ===================== MODULO CONTROL DE EXPEDIENTES =====================
+const EXP_PERSONAL = [
+  "Luis Zanabría Valderrama",
+  "Leonardo Sea Ordaya",
+  "Mac Aguirre Ilizarbe",
+  "Mary Castrillon",
+  "Genessis Lescano Figueroa",
+  "Steven Mamani Tito",
+  "Rosalía Gonzales Relaisa"
+];
+
+let expedientesData = {};
+let expChartInstance = null;
+let currentCellTarget = null; // { fecha, colIdx }
+
+function switchMainTab(tab) {
+  const calArea = document.querySelector('.main-area');
+  const expArea = document.getElementById('expedientesPanel');
+  const btnCal = document.getElementById('btnTabCal');
+  const btnExp = document.getElementById('btnTabExp');
+
+  if (tab === 'exp') {
+    calArea.style.display = 'none';
+    expArea.classList.add('active-tab');
+    btnCal.className = 'btn btn-ghost btn-sm main-tab-btn';
+    btnExp.className = 'btn btn-amber btn-sm main-tab-btn active';
+    renderTablaExpedientes();
+  } else {
+    expArea.classList.remove('active-tab');
+    calArea.style.display = '';
+    btnCal.className = 'btn btn-amber btn-sm main-tab-btn active';
+    btnExp.className = 'btn btn-ghost btn-sm main-tab-btn';
+  }
+}
+
+// Carga de datos iniciales idénticos a la tabla proporcionada
+function getInitialExpedientesState() {
+  const initialDates = [
+    "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17",
+    "2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22",
+    "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27",
+    "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01",
+    "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06",
+    "2026-11-07", "2026-11-08", "2026-11-09"
+  ];
+
+  const state = {};
+  initialDates.forEach(f => {
+    state[f] = {
+      estado: "Sin atender",
+      cols: { "0": [], "1": [], "2": [], "3": [], "4": [], "5": [], "6": [] }
+    };
+  });
+
+  function add(f, col, num, st) {
+    if (!state[f]) return;
+    state[f].cols[col].push({ exp: num, estado: st || "Sin atender" });
+  }
+
+  add("2026-10-15", 0, "1374-2026");
+  add("2026-10-16", 1, "1373-2026");
+  add("2026-10-16", 2, "1386-2026");
+  add("2026-10-16", 2, "1389-2026");
+  add("2026-10-16", 2, "1388-2026");
+  add("2026-10-16", 2, "1385-2026");
+
+  add("2026-10-19", 0, "1085-2026");
+  add("2026-10-19", 0, "1395-2026");
+  add("2026-10-19", 1, "1393-2026");
+  add("2026-10-19", 1, "1387-2026");
+  add("2026-10-19", 2, "1390-2026");
+  add("2026-10-19", 2, "1399-2026");
+  add("2026-10-19", 2, "1216-2026");
+  add("2026-10-19", 4, "1392-2026");
+  add("2026-10-19", 4, "1401-2026");
+
+  add("2026-10-23", 0, "1227-2026");
+  add("2026-10-23", 1, "979-2025");
+  add("2026-10-23", 4, "1406-2026");
+  add("2026-10-23", 6, "458-2026");
+
+  add("2026-10-26", 0, "1405-2026");
+
+  add("2026-10-27", 0, "1429-2026");
+  add("2026-10-27", 0, "717-2026");
+
+  add("2026-10-28", 5, "1420-2026");
+  add("2026-10-28", 5, "1422-2026");
+  add("2026-10-28", 5, "1419-2026");
+
+  add("2026-10-29", 1, "780-2026");
+  add("2026-10-29", 4, "1425-2026");
+
+  add("2026-11-02", 0, "1433-2026");
+  add("2026-11-02", 1, "1449-2026");
+  add("2026-11-02", 2, "1450-2026");
+  add("2026-11-02", 2, "1184-2026");
+
+  add("2026-11-03", 0, "812-2026");
+  add("2026-11-03", 2, "1448-2026");
+  add("2026-11-03", 5, "1440-2026");
+
+  add("2026-11-04", 0, "1457-2026");
+  add("2026-11-04", 2, "1452-2026");
+  add("2026-11-04", 2, "1451-2026");
+  add("2026-11-04", 5, "1446-2026");
+  add("2026-11-04", 5, "1430-2026");
+
+  add("2026-11-05", 1, "848-2026");
+
+  add("2026-11-09", 0, "1461-2026");
+  add("2026-11-09", 0, "1473-2026");
+  add("2026-11-09", 0, "1466-2026");
+  add("2026-11-09", 1, "1460-2026");
+  add("2026-11-09", 1, "1480-2026");
+  add("2026-11-09", 1, "1447-2026");
+  add("2026-11-09", 1, "1469-2026");
+  add("2026-11-09", 1, "1458-2026");
+  add("2026-11-09", 2, "1235-2026");
+  add("2026-11-09", 2, "1472-2026");
+  add("2026-11-09", 2, "1467-2026");
+  add("2026-11-09", 4, "1474-2026");
+  add("2026-11-09", 6, "1470-2026");
+
+  return state;
+}
+
+// Sincronización con Firebase
+async function loadExpedientesFromFirebase() {
+  try {
+    if (window.db) {
+      const snap = await db.ref('expedientes').once('value');
+      const val = snap.val();
+      if (val && Object.keys(val).length > 0) {
+        expedientesData = val;
+      } else {
+        expedientesData = getInitialExpedientesState();
+        await db.ref('expedientes').set(expedientesData);
+      }
+    } else {
+      const local = localStorage.getItem('expedientes_data_copia');
+      expedientesData = local ? JSON.parse(local) : getInitialExpedientesState();
+    }
+  } catch (e) {
+    console.error('Error cargando expedientes:', e);
+    expedientesData = getInitialExpedientesState();
+  }
+
+  // Listener en tiempo real
+  if (window.db) {
+    db.ref('expedientes').on('value', snap => {
+      const v = snap.val();
+      if (v) {
+        expedientesData = v;
+        renderTablaExpedientes();
+      }
+    });
+  }
+}
+
+async function saveExpedientesState() {
+  try {
+    localStorage.setItem('expedientes_data_copia', JSON.stringify(expedientesData));
+    if (window.db) {
+      await db.ref('expedientes').set(expedientesData);
+    }
+  } catch (e) {
+    console.error('Error guardando expedientes:', e);
+  }
+}
+
+function formatFechaDisplay(yyyyMmDd) {
+  if (!yyyyMmDd || !yyyyMmDd.includes('-')) return yyyyMmDd;
+  const [y, m, d] = yyyyMmDd.split('-');
+  return `${parseInt(d)}/${parseInt(m)}/${y}`;
+}
+
+function renderTablaExpedientes() {
+  const tbody = document.getElementById('tbodyExpedientes');
+  if (!tbody) return;
+
+  const fNum = (document.getElementById('filtroExpNum')?.value || '').trim().toLowerCase();
+  const fEst = document.getElementById('filtroExpEstado')?.value || '';
+  const fPer = document.getElementById('filtroExpPersona')?.value || '';
+
+  // Ordenar fechas cronológicamente
+  const fechas = Object.keys(expedientesData).sort();
+
+  let html = '';
+  fechas.forEach(fecha => {
+    const row = expedientesData[fecha] || { estado: 'Sin atender', cols: {} };
+    const cols = row.cols || {};
+
+    // Comprobar filtros
+    let match = true;
+    if (fEst && row.estado !== fEst) match = false;
+
+    // Filtro por número de expediente
+    if (fNum) {
+      let foundInRow = false;
+      for (let c = 0; c < 7; c++) {
+        const list = cols[c] || [];
+        if (list.some(item => (typeof item === 'object' ? item.exp : item).toLowerCase().includes(fNum))) {
+          foundInRow = true;
+          break;
+        }
+      }
+      if (!foundInRow) match = false;
+    }
+
+    // Filtro por persona
+    if (fPer !== '') {
+      const list = cols[fPer] || [];
+      if (!list || list.length === 0) match = false;
+    }
+
+    if (!match) return;
+
+    // Estado class
+    let stClass = 'status-sin';
+    if (row.estado === 'En proceso') stClass = 'status-proc';
+    if (row.estado === 'Atendido') stClass = 'status-aten';
+
+    html += `<tr data-fecha="${fecha}">
+      <td class="col-fecha">${formatFechaDisplay(fecha)}</td>`;
+
+    for (let c = 0; c < 7; c++) {
+      const list = cols[c] || [];
+      html += `<td>
+        <div class="exp-cell-area">`;
+
+      list.forEach((item, idx) => {
+        const expNum = typeof item === 'object' ? item.exp : item;
+        const expSt = typeof item === 'object' ? (item.estado || row.estado) : row.estado;
+        let bClass = 'exp-badge-sin';
+        if (expSt === 'En proceso') bClass = 'exp-badge-proc';
+        if (expSt === 'Atendido') bClass = 'exp-badge-aten';
+
+        html += `<div class="exp-badge-item ${bClass}" title="${expSt}">
+          <span>${expNum}</span>
+          <span class="badge-del" onclick="eliminarExpediente('${fecha}', ${c}, ${idx})" title="Eliminar expediente">✕</span>
+        </div>`;
+      });
+
+      html += `<button class="exp-quick-add" onclick="abrirAddExpModal('${fecha}', ${c})">+ Exp</button>
+        </div>
+      </td>`;
+    }
+
+    html += `<td>
+      <select class="status-select-cell ${stClass}" onchange="cambiarEstadoFila('${fecha}', this.value)">
+        <option value="Sin atender" ${row.estado === 'Sin atender' ? 'selected' : ''}>🔴 Sin atender</option>
+        <option value="En proceso" ${row.estado === 'En proceso' ? 'selected' : ''}>🟡 En proceso</option>
+        <option value="Atendido" ${row.estado === 'Atendido' ? 'selected' : ''}>🟢 Atendido</option>
+      </select>
+    </td>
+    <td style="text-align:center">
+      <button class="btn btn-ghost btn-sm" style="color:#ef4444;padding:2px 5px" onclick="eliminarFilaFecha('${fecha}')" title="Eliminar fecha">🗑️</button>
+    </td>
+    </tr>`;
+  });
+
+  if (html === '') {
+    html = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">No se encontraron registros con los filtros seleccionados</td></tr>';
+  }
+
+  tbody.innerHTML = html;
+}
+
+function filtrarExpedientes() {
+  renderTablaExpedientes();
+}
+
+function limpiarFiltrosExp() {
+  document.getElementById('filtroExpNum').value = '';
+  document.getElementById('filtroExpEstado').value = '';
+  document.getElementById('filtroExpPersona').value = '';
+  renderTablaExpedientes();
+}
+
+async function cambiarEstadoFila(fecha, nuevoEstado) {
+  if (!expedientesData[fecha]) return;
+  expedientesData[fecha].estado = nuevoEstado;
+  await saveExpedientesState();
+  renderTablaExpedientes();
+}
+
+function abrirAddExpModal(fecha, colIdx) {
+  currentCellTarget = { fecha, colIdx };
+  document.getElementById('addExpTitle').textContent = `Agregar a ${EXP_PERSONAL[colIdx]} (${formatFechaDisplay(fecha)})`;
+  document.getElementById('inputExpNumero').value = '';
+  document.getElementById('selectExpEstado').value = expedientesData[fecha]?.estado || 'Sin atender';
+  document.getElementById('modalAddExp').style.display = 'flex';
+  setTimeout(() => document.getElementById('inputExpNumero').focus(), 50);
+}
+
+function cerrarAddExpModal() {
+  document.getElementById('modalAddExp').style.display = 'none';
+  currentCellTarget = null;
+}
+
+async function guardarAddExpModal() {
+  if (!currentCellTarget) return;
+  const num = document.getElementById('inputExpNumero').value.trim();
+  const st = document.getElementById('selectExpEstado').value;
+  if (!num) {
+    showToast('⚠️ Escriba el número de expediente');
+    return;
+  }
+
+  const { fecha, colIdx } = currentCellTarget;
+  if (!expedientesData[fecha]) {
+    expedientesData[fecha] = { estado: 'Sin atender', cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] } };
+  }
+  if (!expedientesData[fecha].cols) expedientesData[fecha].cols = {};
+  if (!expedientesData[fecha].cols[colIdx]) expedientesData[fecha].cols[colIdx] = [];
+
+  expedientesData[fecha].cols[colIdx].push({ exp: num, estado: st });
+  await saveExpedientesState();
+  cerrarAddExpModal();
+  renderTablaExpedientes();
+  showToast('✅ Expediente agregado');
+}
+
+async function eliminarExpediente(fecha, colIdx, idx) {
+  if (!confirm('¿Eliminar este expediente?')) return;
+  if (expedientesData[fecha]?.cols?.[colIdx]) {
+    expedientesData[fecha].cols[colIdx].splice(idx, 1);
+    await saveExpedientesState();
+    renderTablaExpedientes();
+    showToast('🗑️ Expediente eliminado');
+  }
+}
+
+// Fechas ilimitadas
+function abrirAgregarFilaModal() {
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('inputNuevaFechaVal').value = hoy;
+  document.getElementById('modalNuevaFecha').style.display = 'flex';
+}
+
+function cerrarNuevaFechaModal() {
+  document.getElementById('modalNuevaFecha').style.display = 'none';
+}
+
+async function guardarNuevaFechaModal() {
+  const f = document.getElementById('inputNuevaFechaVal').value;
+  if (!f) return;
+  if (expedientesData[f]) {
+    showToast('⚠️ Esa fecha ya existe en la tabla');
+    return;
+  }
+  expedientesData[f] = {
+    estado: 'Sin atender',
+    cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] }
+  };
+  await saveExpedientesState();
+  cerrarNuevaFechaModal();
+  renderTablaExpedientes();
+  showToast('✅ Fecha agregada a la matriz');
+}
+
+async function eliminarFilaFecha(fecha) {
+  if (!confirm(`¿Eliminar la fila completa del ${formatFechaDisplay(fecha)}?`)) return;
+  delete expedientesData[fecha];
+  await saveExpedientesState();
+  renderTablaExpedientes();
+  showToast('🗑️ Fila eliminada');
+}
+
+// Exportar a Excel
+function exportarExpedientesExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Biblioteca Excel cargándose, reintente en un momento');
+    return;
+  }
+
+  const rows = [
+    ["Fecha", ...EXP_PERSONAL, "Estado"]
+  ];
+
+  const fechas = Object.keys(expedientesData).sort();
+  fechas.forEach(f => {
+    const r = expedientesData[f] || {};
+    const cols = r.cols || {};
+    const row = [formatFechaDisplay(f)];
+
+    for (let c = 0; c < 7; c++) {
+      const list = cols[c] || [];
+      const expStr = list.map(it => typeof it === 'object' ? it.exp : it).join(', ');
+      row.push(expStr);
+    }
+    row.push(r.estado || 'Sin atender');
+    rows.push(row);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
+  XLSX.writeFile(wb, "Control_Expedientes_JUSHMRCB.xlsx");
+}
+
+function imprimirExpedientesPDF() {
+  window.print();
+}
+
+// Histograma con Chart.js
+function abrirHistograma() {
+  const modal = document.getElementById('modalHisto');
+  modal.classList.add('open');
+
+  const sinAtenderCounts = [0,0,0,0,0,0,0];
+  const enProcesoCounts = [0,0,0,0,0,0,0];
+  const atendidoCounts = [0,0,0,0,0,0,0];
+
+  let totalGeneral = 0;
+  let totalSin = 0;
+  let totalProc = 0;
+  let totalAten = 0;
+
+  Object.values(expedientesData).forEach(r => {
+    const rowEst = r.estado || 'Sin atender';
+    const cols = r.cols || {};
+    for (let c = 0; c < 7; c++) {
+      const list = cols[c] || [];
+      list.forEach(item => {
+        totalGeneral++;
+        const st = typeof item === 'object' ? (item.estado || rowEst) : rowEst;
+        if (st === 'Sin atender') { sinAtenderCounts[c]++; totalSin++; }
+        else if (st === 'En proceso') { enProcesoCounts[c]++; totalProc++; }
+        else if (st === 'Atendido') { atendidoCounts[c]++; totalAten++; }
+      });
+    }
+  });
+
+  const ctx = document.getElementById('histoChartCanvas').getContext('2d');
+  if (expChartInstance) expChartInstance.destroy();
+
+  const isDark = document.body.classList.contains('dark');
+  const textColor = isDark ? '#e2e8f0' : '#1e293b';
+
+  expChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: EXP_PERSONAL.map(p => p.split(' ')[0] + ' ' + (p.split(' ')[1] || '')),
+      datasets: [
+        { label: '🔴 Sin atender', data: sinAtenderCounts, backgroundColor: '#ef4444' },
+        { label: '🟡 En proceso', data: enProcesoCounts, backgroundColor: '#facc15' },
+        { label: '🟢 Atendido', data: atendidoCounts, backgroundColor: '#22c55e' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { color: textColor } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, color: textColor } }
+      },
+      plugins: {
+        legend: { labels: { color: textColor } },
+        title: {
+          display: true,
+          text: 'Distribución de Expedientes Asignados por Responsable',
+          color: textColor,
+          font: { size: 14, weight: 'bold' }
+        }
+      }
+    }
+  });
+
+  document.getElementById('histoStats').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px">
+      <div style="font-size:18px;font-weight:700">${totalGeneral}</div>
+      <div style="font-size:11px;color:var(--muted)">Total Expedientes</div>
+    </div>
+    <div style="background:#fee2e2;border:1px solid #f87171;border-radius:6px;padding:8px;color:#991b1b">
+      <div style="font-size:18px;font-weight:700">${totalSin}</div>
+      <div style="font-size:11px">Sin atender</div>
+    </div>
+    <div style="background:#fef9c3;border:1px solid #facc15;border-radius:6px;padding:8px;color:#854d0e">
+      <div style="font-size:18px;font-weight:700">${totalProc}</div>
+      <div style="font-size:11px">En proceso</div>
+    </div>
+    <div style="background:#dcfce7;border:1px solid #4ade80;border-radius:6px;padding:8px;color:#166534">
+      <div style="font-size:18px;font-weight:700">${totalAten}</div>
+      <div style="font-size:11px">Atendidos</div>
+    </div>
+  `;
+}
+
+function cerrarHistograma() {
+  document.getElementById('modalHisto').classList.remove('open');
+}
+
 initApp();
+loadExpedientesFromFirebase();
 
 // ===== LOGIN =====
 const USERS = [
