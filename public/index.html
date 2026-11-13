@@ -3509,6 +3509,29 @@ function cerrarAddExpModal() {
   currentCellTarget = null;
 }
 
+// Buscar si un expediente ya existe asignado en el sistema
+function buscarExpedienteDuplicado(numExp, targetFecha, targetCol) {
+  const norm = numExp.trim().toLowerCase();
+  for (const f of Object.keys(expedientesData)) {
+    const r = expedientesData[f] || {};
+    const cols = r.cols || {};
+    for (let c = 0; c < 7; c++) {
+      const list = cols[c] || [];
+      for (const item of list) {
+        const itemNum = (typeof item === 'object' ? item.exp : item).trim().toLowerCase();
+        if (itemNum === norm) {
+          return {
+            fecha: f,
+            col: c,
+            persona: EXP_PERSONAL[c]
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 async function guardarAddExpModal() {
   if (!currentCellTarget) return;
   const num = document.getElementById('inputExpNumero').value.trim();
@@ -3519,6 +3542,15 @@ async function guardarAddExpModal() {
   }
 
   const { fecha, colIdx } = currentCellTarget;
+
+  // Validación: No permitir replicar el mismo expediente a otra persona
+  const dup = buscarExpedienteDuplicado(num, fecha, colIdx);
+  if (dup) {
+    showToast(`⚠️ El expediente "${num}" ya está asignado a ${dup.persona} (${formatFechaDisplay(dup.fecha)})`);
+    alert(`⚠️ Expediente Duplicado:\n\nEl expediente "${num}" ya fue registrado y asignado a:\n\n👤 ${dup.persona}\n📅 Fecha: ${formatFechaDisplay(dup.fecha)}\n\nNo se permite replicar el mismo expediente a otra persona.`);
+    return;
+  }
+
   if (!expedientesData[fecha]) {
     expedientesData[fecha] = { cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] } };
   }
