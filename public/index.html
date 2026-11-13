@@ -3253,7 +3253,6 @@ function renderTheadExpedientes(fPer) {
   thead.innerHTML = `<tr>
     <th style="width:140px">Fecha (Día)</th>
     ${thCols}
-    <th style="width:120px">Estado Global</th>
     <th style="width:40px">🗑️</th>
   </tr>`;
 }
@@ -3292,21 +3291,20 @@ function renderTablaExpedientes() {
       }
     }
 
-    // 2. Filtro por Estado Global o Individual
+    // 2. Filtro por Estado de Expediente
     if (fEst) {
       let tieneEstado = false;
       visibleCols.forEach(c => {
         const list = cols[c] || [];
         list.forEach(item => {
-          const st = typeof item === 'object' ? (item.estado || row.estado) : row.estado;
+          const st = typeof item === 'object' ? (item.estado || 'Sin atender') : 'Sin atender';
           if (st === fEst) tieneEstado = true;
         });
       });
-      if (row.estado === fEst) tieneEstado = true;
       if (!tieneEstado) return;
     }
 
-    // 3. Filtro por Número de Expediente: solo mostrar celdas/filas que coincidan
+    // 3. Filtro por Número de Expediente
     if (fNum) {
       let tieneCoincidencia = false;
       visibleCols.forEach(c => {
@@ -3371,14 +3369,7 @@ function renderTablaExpedientes() {
       </td>`;
     });
 
-    html += `<td>
-      <select class="status-select-cell ${stClass}" onchange="cambiarEstadoFila('${fecha}', this.value)">
-        <option value="Sin atender" ${row.estado === 'Sin atender' ? 'selected' : ''}>🔴 Sin atender</option>
-        <option value="En proceso" ${row.estado === 'En proceso' ? 'selected' : ''}>🟡 En proceso</option>
-        <option value="Atendido" ${row.estado === 'Atendido' ? 'selected' : ''}>🟢 Atendido</option>
-      </select>
-    </td>
-    <td style="text-align:center">
+    html += `<td style="text-align:center">
       <button class="btn btn-ghost btn-sm" style="color:#ef4444;padding:2px 5px" onclick="eliminarFilaFecha('${fecha}')" title="Eliminar fecha">🗑️</button>
     </td>
     </tr>`;
@@ -3392,6 +3383,182 @@ function renderTablaExpedientes() {
   }
 
   tbody.innerHTML = html;
+}
+
+
+function abrirAddExpModal(fecha, colIdx) {
+  currentCellTarget = { fecha, colIdx };
+  document.getElementById('addExpTitle').textContent = `Agregar a ${EXP_PERSONAL[colIdx]} (${formatFechaDisplay(fecha)})`;
+  document.getElementById('inputExpNumero').value = '';
+  document.getElementById('selectExpEstado').value = 'Sin atender';
+  document.getElementById('modalAddExp').style.display = 'flex';
+  setTimeout(() => document.getElementById('inputExpNumero').focus(), 50);
+}
+
+function cerrarAddExpModal() {
+  document.getElementById('modalAddExp').style.display = 'none';
+  currentCellTarget = null;
+}
+
+async function guardarAddExpModal() {
+  if (!currentCellTarget) return;
+  const num = document.getElementById('inputExpNumero').value.trim();
+  const st = document.getElementById('selectExpEstado').value;
+  if (!num) {
+    showToast('⚠️ Escriba el número de expediente');
+    return;
+  }
+
+  const { fecha, colIdx } = currentCellTarget;
+  if (!expedientesData[fecha]) {
+    expedientesData[fecha] = { cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] } };
+  }
+  if (!expedientesData[fecha].cols) expedientesData[fecha].cols = {};
+  if (!expedientesData[fecha].cols[colIdx]) expedientesData[fecha].cols[colIdx] = [];
+
+  expedientesData[fecha].cols[colIdx].push({ exp: num, estado: st });
+  await saveExpedientesState();
+  cerrarAddExpModal();
+  renderTablaExpedientes();
+  showToast('✅ Expediente agregado');
+}
+
+async function eliminarExpediente(fecha, colIdx, idx) {
+  if (!confirm('¿Eliminar este expediente?')) return;
+  if (expedientesData[fecha]?.cols?.[colIdx]) {
+    expedientesData[fecha].cols[colIdx].splice(idx, 1);
+    await saveExpedientesState();
+    renderTablaExpedientes();
+    showToast('🗑️ Expediente eliminado');
+  }
+}
+
+async function cambiarEstadoExpediente(fecha, colIdx, idx, nuevoEstado) {
+  if (!expedientesData[fecha]?.cols?.[colIdx]?.[idx]) return;
+  if (typeof expedientesData[fecha].cols[colIdx][idx] === 'string') {
+    expedientesData[fecha].cols[colIdx][idx] = { exp: expedientesData[fecha].cols[colIdx][idx], estado: nuevoEstado };
+  } else {
+    expedientesData[fecha].cols[colIdx][idx].estado = nuevoEstado;
+  }
+  await saveExpedientesState();
+  renderTablaExpedientes();
+  showToast('✅ Estado de expediente actualizado');
+}
+
+function abrirAgregarFilaModal() {
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('inputNuevaFechaVal').value = hoy;
+  document.getElementById('modalNuevaFecha').style.display = 'flex';
+}
+
+function cerrarNuevaFechaModal() {
+  document.getElementById('modalNuevaFecha').style.display = 'none';
+}
+
+async function guardarNuevaFechaModal() {
+  const f = document.getElementById('inputNuevaFechaVal').value;
+  if (!f) return;
+  if (esFinDeSemana(f)) {
+    showToast('⚠️ Solo se admiten días de Lunes a Viernes');
+    return;
+  }
+  if (expedientesData[f]) {
+    showToast('⚠️ Esa fecha ya existe en la tabla');
+    return;
+  }
+  expedientesData[f] = {
+    cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] }
+  };
+  await saveExpedientesState();
+  cerrarNuevaFechaModal();
+  renderTablaExpedientes();
+  showToast('✅ Fecha ' + formatFechaDisplay(f) + ' agregada');
+}
+
+function agregarProximaSemana() {
+  const fechas = Object.keys(expedientesData).sort();
+  let ultima = fechas.length > 0 ? new Date(fechas[fechas.length - 1] + 'T00:00:00') : new Date();
+  let agregadas = 0;
+  let cursor = new Date(ultima);
+
+  while (agregadas < 5) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) { // Lunes a Viernes
+      const iso = cursor.toISOString().split('T')[0];
+      if (!expedientesData[iso]) {
+        expedientesData[iso] = {
+          cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] }
+        };
+        agregadas++;
+      }
+    }
+  }
+  saveExpedientesState();
+  renderTablaExpedientes();
+  showToast('✅ Agregados 5 días hábiles siguientes');
+}
+
+async function eliminarFilaFecha(fecha) {
+  if (!confirm(`¿Eliminar la fila completa del ${formatFechaDisplay(fecha)}?`)) return;
+  delete expedientesData[fecha];
+  await saveExpedientesState();
+  renderTablaExpedientes();
+  showToast('🗑️ Fila eliminada');
+}
+
+function filtrarExpedientes() {
+  renderTablaExpedientes();
+}
+
+function limpiarFiltrosExp() {
+  document.getElementById('filtroExpNum').value = '';
+  document.getElementById('filtroExpEstado').value = '';
+  document.getElementById('filtroExpPersona').value = '';
+  renderTablaExpedientes();
+}
+
+function exportarExpedientesExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Biblioteca Excel cargándose, reintente en un momento');
+    return;
+  }
+
+  const fPer = document.getElementById('filtroExpPersona')?.value || '';
+  const personalExport = fPer !== '' ? [EXP_PERSONAL[parseInt(fPer)]] : EXP_PERSONAL;
+  const colIndices = fPer !== '' ? [parseInt(fPer)] : [0, 1, 2, 3, 4, 5, 6];
+
+  const rows = [
+    ["Fecha", ...personalExport]
+  ];
+
+  const fechas = Object.keys(expedientesData).sort();
+  fechas.forEach(f => {
+    if (esFinDeSemana(f)) return;
+    const r = expedientesData[f] || {};
+    const cols = r.cols || {};
+    const row = [formatFechaDisplay(f)];
+
+    colIndices.forEach(c => {
+      const list = cols[c] || [];
+      const expStr = list.map(it => {
+        const num = typeof it === 'object' ? it.exp : it;
+        const st = typeof it === 'object' ? (it.estado || 'Sin atender') : 'Sin atender';
+        return `${num} (${st})`;
+      }).join(', ');
+      row.push(expStr);
+    });
+    rows.push(row);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
+  XLSX.writeFile(wb, "Control_Expedientes_JUSHMRCB.xlsx");
+}
+
+function imprimirExpedientesPDF() {
+  window.print();
 }
 
 function abrirHistograma() {
