@@ -624,6 +624,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+window.db = db;
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}
 // water drop click
 document.getElementById('waterDrop').addEventListener('click', function(){
@@ -3171,32 +3172,58 @@ function getInitialExpedientesState() {
 }
 
 // Sincronización con Firebase
+function normalizeExpedientesData(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const clean = {};
+  Object.keys(raw).forEach(fecha => {
+    const row = raw[fecha] || {};
+    const colsObj = { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] };
+    if (row.cols) {
+      for (let c = 0; c < 7; c++) {
+        const list = row.cols[c] || [];
+        if (Array.isArray(list)) {
+          colsObj[c] = list.filter(item => item !== null && item !== undefined).map(item => {
+            if (typeof item === 'string') return { exp: item, estado: 'Sin atender' };
+            return { exp: item.exp || '', estado: item.estado || 'Sin atender' };
+          });
+        }
+      }
+    }
+    clean[fecha] = {
+      cols: colsObj
+    };
+  });
+  return clean;
+}
+
 async function loadExpedientesFromFirebase() {
   try {
-    if (window.db) {
-      const snap = await db.ref('expedientes').once('value');
+    const fireDb = window.db || (typeof db !== 'undefined' ? db : null);
+    if (fireDb) {
+      const snap = await fireDb.ref('expedientes').once('value');
       const val = snap.val();
       if (val && Object.keys(val).length > 0) {
-        expedientesData = val;
+        expedientesData = normalizeExpedientesData(val);
       } else {
         expedientesData = getInitialExpedientesState();
-        await db.ref('expedientes').set(expedientesData);
+        await fireDb.ref('expedientes').set(expedientesData);
       }
     } else {
       const local = localStorage.getItem('expedientes_data_copia');
-      expedientesData = local ? JSON.parse(local) : getInitialExpedientesState();
+      expedientesData = local ? normalizeExpedientesData(JSON.parse(local)) : getInitialExpedientesState();
     }
   } catch (e) {
     console.error('Error cargando expedientes:', e);
     expedientesData = getInitialExpedientesState();
   }
 
-  // Listener en tiempo real
-  if (window.db) {
-    db.ref('expedientes').on('value', snap => {
+  // Listener en tiempo real sin sobrescribir mientras se edita
+  const fireDb = window.db || (typeof db !== 'undefined' ? db : null);
+  if (fireDb) {
+    fireDb.ref('expedientes').on('value', snap => {
       const v = snap.val();
       if (v) {
-        expedientesData = v;
+        expedientesData = normalizeExpedientesData(v);
         renderTablaExpedientes();
       }
     });
@@ -3206,11 +3233,14 @@ async function loadExpedientesFromFirebase() {
 async function saveExpedientesState() {
   try {
     localStorage.setItem('expedientes_data_copia', JSON.stringify(expedientesData));
-    if (window.db) {
-      await db.ref('expedientes').set(expedientesData);
+    const fireDb = window.db || (typeof db !== 'undefined' ? db : null);
+    if (fireDb) {
+      await fireDb.ref('expedientes').set(expedientesData);
+      console.log('✅ Expedientes guardados en Firebase con éxito.');
     }
   } catch (e) {
     console.error('Error guardando expedientes:', e);
+    showToast('⚠️ Error al sincronizar con Firebase: ' + (e.message || e));
   }
 }
 
