@@ -3302,18 +3302,23 @@ async function saveExpedientesState() {
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
+function parseFechaLocal(yyyyMmDd) {
+  const parts = yyyyMmDd.split('-').map(Number);
+  return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0); // Al mediodía evita desfases de huso horario
+}
+
 function formatFechaDisplay(yyyyMmDd) {
   if (!yyyyMmDd || !yyyyMmDd.includes('-')) return yyyyMmDd;
-  const [y, m, d] = yyyyMmDd.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
+  const dt = parseFechaLocal(yyyyMmDd);
   const diaNombre = DIAS_SEMANA[dt.getDay()];
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
   return `${diaNombre} ${d}/${m}/${y}`;
 }
 
 function esFinDeSemana(yyyyMmDd) {
   if (!yyyyMmDd || !yyyyMmDd.includes('-')) return false;
-  const [y, m, d] = yyyyMmDd.split('-').map(Number);
-  const day = new Date(y, m - 1, d).getDay();
+  const dt = parseFechaLocal(yyyyMmDd);
+  const day = dt.getDay();
   return day === 0 || day === 6; // Domingo=0, Sábado=6
 }
 
@@ -3346,8 +3351,29 @@ function renderTablaExpedientes() {
 
   renderTheadExpedientes(fPer);
 
-  // Ordenar fechas cronológicamente
-  const fechas = Object.keys(expedientesData).sort();
+  // Asegurar lista continua de TODOS los días hábiles de lunes a viernes
+  const todasLasFechasSet = new Set(Object.keys(expedientesData));
+  
+  // Rango continuo asegurado: desde el 13 de octubre 2026 hasta al menos 30 días después de hoy
+  let dCursor = new Date(2026, 9, 13, 12, 0, 0); // 13 de Octubre 2026
+  let dMax = new Date();
+  dMax.setDate(dMax.getDate() + 45); // Cubre hasta 45 días al futuro
+  if (dMax < new Date(2026, 11, 31, 12, 0, 0)) {
+    dMax = new Date(2026, 11, 31, 12, 0, 0); // Al menos hasta fin de 2026
+  }
+
+  while (dCursor <= dMax) {
+    const day = dCursor.getDay();
+    if (day !== 0 && day !== 6) { // Lunes a Viernes
+      const yStr = dCursor.getFullYear();
+      const mStr = String(dCursor.getMonth() + 1).padStart(2, '0');
+      const dStr = String(dCursor.getDate()).padStart(2, '0');
+      todasLasFechasSet.add(`${yStr}-${mStr}-${dStr}`);
+    }
+    dCursor.setDate(dCursor.getDate() + 1);
+  }
+
+  const fechas = Array.from(todasLasFechasSet).sort();
 
   let html = '';
   let filasMostradas = 0;
