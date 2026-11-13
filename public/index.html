@@ -3558,21 +3558,45 @@ function exportarExpedientesExcel() {
     if (esFinDeSemana(f)) return;
     const r = expedientesData[f] || {};
     const cols = r.cols || {};
-    const row = [formatFechaDisplay(f)];
 
-    colIndices.forEach(c => {
-      const list = cols[c] || [];
-      const expStr = list.map(it => {
-        const num = typeof it === 'object' ? it.exp : it;
-        const st = typeof it === 'object' ? (it.estado || 'Sin atender') : 'Sin atender';
-        return `${num} (${st})`;
-      }).join(', ');
-      row.push(expStr);
+    // Obtener las listas de expedientes para cada columna en esta fecha
+    const colsLists = colIndices.map(c => cols[c] || []);
+
+    // Determinar cuántas filas se necesitan para esta fecha (tantas como el máximo de expedientes en una columna)
+    let maxItems = 1;
+    colsLists.forEach(list => {
+      if (list.length > maxItems) maxItems = list.length;
     });
-    rows.push(row);
+
+    // Crear una fila por cada expediente en lugar de concatenar
+    for (let k = 0; k < maxItems; k++) {
+      const row = [];
+      // La primera fila lleva la fecha; las filas siguientes del mismo día llevan la fecha o en blanco
+      row.push(k === 0 ? formatFechaDisplay(f) : formatFechaDisplay(f) + ' (cont.)');
+
+      colsLists.forEach(list => {
+        const it = list[k];
+        if (it) {
+          const num = typeof it === 'object' ? it.exp : it;
+          const st = typeof it === 'object' ? (it.estado || 'Sin atender') : 'Sin atender';
+          row.push(`${num} [${st}]`);
+        } else {
+          row.push(''); // Celda vacía independiente
+        }
+      });
+
+      rows.push(row);
+    }
   });
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Auto-ajustar anchos de columnas en Excel
+  ws['!cols'] = [
+    { wch: 22 }, // Fecha
+    ...colIndices.map(() => ({ wch: 26 })) // Columnas de personal
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
   XLSX.writeFile(wb, "Control_Expedientes_JUSHMRCB.xlsx");
