@@ -699,7 +699,6 @@ document.getElementById('waterDrop').addEventListener('click', function(){
         <span><span class="leg-dot leg-aten"></span>Atendido</span>
       </div>
       <button class="btn btn-navy btn-sm" onclick="abrirAgregarFilaModal()">➕ Agregar Fecha</button>
-      <button class="btn btn-ghost btn-sm" style="border:1px solid var(--border);color:var(--text)" onclick="agregarProximaSemana()" title="Añade automáticamente la siguiente semana hábil">📅 + Próximos 5 días</button>
       <button class="btn btn-ghost btn-sm" style="border:1px solid var(--border);color:var(--text)" onclick="abrirHistograma()">📊 Histograma</button>
       <button class="btn btn-success btn-sm" onclick="exportarExpedientesExcel()">📥 Excel</button>
       <button class="btn btn-amber btn-sm" onclick="imprimirExpedientesPDF()">🖨️ PDF / Imprimir</button>
@@ -3354,13 +3353,9 @@ function renderTablaExpedientes() {
   // Asegurar lista continua de TODOS los días hábiles de lunes a viernes
   const todasLasFechasSet = new Set(Object.keys(expedientesData));
   
-  // Rango continuo asegurado: desde el 13 de octubre 2026 hasta al menos 30 días después de hoy
-  let dCursor = new Date(2026, 9, 13, 12, 0, 0); // 13 de Octubre 2026
-  let dMax = new Date();
-  dMax.setDate(dMax.getDate() + 45); // Cubre hasta 45 días al futuro
-  if (dMax < new Date(2026, 11, 31, 12, 0, 0)) {
-    dMax = new Date(2026, 11, 31, 12, 0, 0); // Al menos hasta fin de 2026
-  }
+  // Rango continuo de TODOS los días hábiles del año
+  let dCursor = new Date(2026, 9, 1, 12, 0, 0); // Desde inicio de Octubre 2026
+  let dMax = new Date(2027, 11, 31, 12, 0, 0); // Todo 2026 y 2027 completo continuo
 
   while (dCursor <= dMax) {
     const day = dCursor.getDay();
