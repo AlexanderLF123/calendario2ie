@@ -722,7 +722,8 @@ document.getElementById('waterDrop').addEventListener('click', function(){
     <h3 style="font-size:14px;margin-bottom:10px" id="addExpTitle">Agregar Expediente</h3>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">N° Expediente:</label>
-      <input type="text" id="inputExpNumero" class="exp-input" placeholder="ej. 1386-2026" style="width:100%">
+      <input type="text" id="inputExpNumero" class="exp-input" placeholder="ej. 1386-2026" style="width:100%" oninput="validarExpedienteEnVivo()">
+      <div id="msgErrorDup" style="display:none;margin-top:6px;font-size:11px;color:#b91c1c;background:#fee2e2;border:1px solid #f87171;padding:6px 8px;border-radius:4px;line-height:1.4"></div>
     </div>
     <div style="margin-bottom:14px">
       <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px">Estado individual:</label>
@@ -734,7 +735,7 @@ document.getElementById('waterDrop').addEventListener('click', function(){
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="cerrarAddExpModal()" style="border:1px solid var(--border);color:var(--text)">Cancelar</button>
-      <button class="btn btn-navy btn-sm" onclick="guardarAddExpModal()">Guardar</button>
+      <button class="btn btn-navy btn-sm" id="btnGuardarAddExp" onclick="guardarAddExpModal()">Guardar</button>
     </div>
   </div>
 </div>
@@ -3510,20 +3511,38 @@ function cerrarAddExpModal() {
 }
 
 // Buscar si un expediente ya existe asignado en el sistema
-function buscarExpedienteDuplicado(numExp, targetFecha, targetCol) {
-  const norm = numExp.trim().toLowerCase();
-  for (const f of Object.keys(expedientesData)) {
+// Función estricta para normalizar número de expediente (ignora espacios, guiones, barras, mayúsculas)
+function normalizarExp(txt) {
+  if (!txt) return '';
+  return String(txt).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Buscar si un expediente ya existe registrado en cualquier persona o fecha
+function buscarExpedienteDuplicado(numExp) {
+  const normTarget = normalizarExp(numExp);
+  if (!normTarget) return null;
+
+  const fechas = Object.keys(expedientesData);
+  for (let i = 0; i < fechas.length; i++) {
+    const f = fechas[i];
     const r = expedientesData[f] || {};
     const cols = r.cols || {};
+
     for (let c = 0; c < 7; c++) {
       const list = cols[c] || [];
-      for (const item of list) {
-        const itemNum = (typeof item === 'object' ? item.exp : item).trim().toLowerCase();
-        if (itemNum === norm) {
+      for (let k = 0; k < list.length; k++) {
+        const item = list[k];
+        if (!item) continue;
+        const rawNum = typeof item === 'object' ? item.exp : item;
+        const normExistente = normalizarExp(rawNum);
+
+        // Comparación estricta alfanumérica
+        if (normExistente && normExistente === normTarget) {
           return {
+            expRegistrado: rawNum,
             fecha: f,
             col: c,
-            persona: EXP_PERSONAL[c]
+            persona: EXP_PERSONAL[c] || 'Desconocido'
           };
         }
       }
@@ -3532,24 +3551,64 @@ function buscarExpedienteDuplicado(numExp, targetFecha, targetCol) {
   return null;
 }
 
+// Validación en tiempo real mientras el usuario escribe en el modal
+function validarExpedienteEnVivo() {
+  const input = document.getElementById('inputExpNumero');
+  const msg = document.getElementById('msgErrorDup');
+  const btnGuardar = document.getElementById('btnGuardarAddExp');
+  if (!input) return;
+
+  const num = input.value.trim();
+  const dup = buscarExpedienteDuplicado(num);
+
+  if (dup) {
+    if (msg) {
+      msg.style.display = 'block';
+      msg.innerHTML = `⚠️ <b>Expediente Ya Registrado:</b><br>Asignado a <b>${dup.persona}</b> en fecha <b>${formatFechaDisplay(dup.fecha)}</b>.<br>❌ <i>No se permite guardar expedientes replicados.</i>`;
+    }
+    input.style.borderColor = '#dc2626';
+    input.style.backgroundColor = '#fef2f2';
+    if (btnGuardar) {
+      btnGuardar.disabled = true;
+      btnGuardar.style.opacity = '0.5';
+      btnGuardar.style.cursor = 'not-allowed';
+    }
+    return true; // Es duplicado
+  } else {
+    if (msg) msg.style.display = 'none';
+    input.style.borderColor = '';
+    input.style.backgroundColor = '';
+    if (btnGuardar) {
+      btnGuardar.disabled = false;
+      btnGuardar.style.opacity = '1';
+      btnGuardar.style.cursor = 'pointer';
+    }
+    return false;
+  }
+}
+
 async function guardarAddExpModal() {
   if (!currentCellTarget) return;
-  const num = document.getElementById('inputExpNumero').value.trim();
+  const input = document.getElementById('inputExpNumero');
+  const num = input.value.trim();
   const st = document.getElementById('selectExpEstado').value;
+
   if (!num) {
     showToast('⚠️ Escriba el número de expediente');
+    input.focus();
     return;
+  }
+
+  // 1. Verificación estricta anti-duplicados
+  const dup = buscarExpedienteDuplicado(num);
+  if (dup) {
+    validarExpedienteEnVivo();
+    alert(`⛔ ACCIÓN DENEGADA:\n\nEl expediente "${num}" ya existe en el sistema.\n\nAsignado a: ${dup.persona}\nFecha: ${formatFechaDisplay(dup.fecha)}\n\nNo se permite guardar expedientes replicados.`);
+    input.focus();
+    return; // BLOQUEO TOTAL: no guarda
   }
 
   const { fecha, colIdx } = currentCellTarget;
-
-  // Validación: No permitir replicar el mismo expediente a otra persona
-  const dup = buscarExpedienteDuplicado(num, fecha, colIdx);
-  if (dup) {
-    showToast(`⚠️ El expediente "${num}" ya está asignado a ${dup.persona} (${formatFechaDisplay(dup.fecha)})`);
-    alert(`⚠️ Expediente Duplicado:\n\nEl expediente "${num}" ya fue registrado y asignado a:\n\n👤 ${dup.persona}\n📅 Fecha: ${formatFechaDisplay(dup.fecha)}\n\nNo se permite replicar el mismo expediente a otra persona.`);
-    return;
-  }
 
   if (!expedientesData[fecha]) {
     expedientesData[fecha] = { cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] } };
@@ -3557,11 +3616,12 @@ async function guardarAddExpModal() {
   if (!expedientesData[fecha].cols) expedientesData[fecha].cols = {};
   if (!expedientesData[fecha].cols[colIdx]) expedientesData[fecha].cols[colIdx] = [];
 
+  // 2. Guardar únicamente si es único
   expedientesData[fecha].cols[colIdx].push({ exp: num, estado: st });
   await saveExpedientesState();
   cerrarAddExpModal();
   renderTablaExpedientes();
-  showToast('✅ Expediente agregado');
+  showToast('✅ Expediente guardado exitosamente');
 }
 
 async function eliminarExpediente(fecha, colIdx, idx) {
