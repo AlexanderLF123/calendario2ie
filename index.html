@@ -714,19 +714,8 @@ document.getElementById('waterDrop').addEventListener('click', function(){
 
   <div class="exp-table-wrap">
     <table class="exp-table" id="tablaExpedientes">
-      <thead>
-        <tr>
-          <th style="width:110px">Fecha</th>
-          <th>Luis Zanabría Valderrama</th>
-          <th>Leonardo Sea Ordaya</th>
-          <th>Mac Aguirre Ilizarbe</th>
-          <th>Mary Castrillon</th>
-          <th>Genessis Lescano Figueroa</th>
-          <th>Steven Mamani Tito</th>
-          <th>Rosalía Gonzales Relaisa</th>
-          <th style="width:130px">Estado Global</th>
-          <th style="width:40px">🗑️</th>
-        </tr>
+      <thead id="theadExpedientes">
+        <!-- Renderizado dinámicamente según filtro de personal -->
       </thead>
       <tbody id="tbodyExpedientes">
         <!-- Generado dinámicamente -->
@@ -776,9 +765,17 @@ document.getElementById('waterDrop').addEventListener('click', function(){
 <!-- MODAL HISTOGRAMA -->
 <div id="modalHisto">
   <div class="histo-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px">
-      <h3 style="font-size:16px">📊 Histograma de Expedientes por Personal y Estado</h3>
-      <button class="btn btn-ghost btn-sm" onclick="cerrarHistograma()" style="border:1px solid var(--border);color:var(--text)">✕ Cerrar</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;flex-wrap:wrap;gap:8px">
+      <h3 style="font-size:16px">📊 Histograma de Expedientes</h3>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;font-weight:700">Período:</label>
+        <select id="histoRangoSelect" class="exp-input" style="font-size:12px;padding:3px 8px" onchange="actualizarHistograma()">
+          <option value="15d">Últimos 15 días</option>
+          <option value="mes" selected>Mes Completo (Actual)</option>
+          <option value="todo">Histórico Completo</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="cerrarHistograma()" style="border:1px solid var(--border);color:var(--text)">✕ Cerrar</button>
+      </div>
     </div>
     <div style="position:relative;height:360px;width:100%">
       <canvas id="histoChartCanvas"></canvas>
@@ -3241,6 +3238,26 @@ function esFinDeSemana(yyyyMmDd) {
   return day === 0 || day === 6; // Domingo=0, Sábado=6
 }
 
+function renderTheadExpedientes(fPer) {
+  const thead = document.getElementById('theadExpedientes');
+  if (!thead) return;
+
+  let thCols = '';
+  if (fPer !== '') {
+    const colIdx = parseInt(fPer);
+    thCols = `<th style="background:#2563eb">${EXP_PERSONAL[colIdx]} (Filtrado)</th>`;
+  } else {
+    thCols = EXP_PERSONAL.map(p => `<th>${p}</th>`).join('');
+  }
+
+  thead.innerHTML = `<tr>
+    <th style="width:140px">Fecha (Día)</th>
+    ${thCols}
+    <th style="width:120px">Estado Global</th>
+    <th style="width:40px">🗑️</th>
+  </tr>`;
+}
+
 function renderTablaExpedientes() {
   const tbody = document.getElementById('tbodyExpedientes');
   if (!tbody) return;
@@ -3249,40 +3266,61 @@ function renderTablaExpedientes() {
   const fEst = document.getElementById('filtroExpEstado')?.value || '';
   const fPer = document.getElementById('filtroExpPersona')?.value || '';
 
+  renderTheadExpedientes(fPer);
+
   // Ordenar fechas cronológicamente
   const fechas = Object.keys(expedientesData).sort();
 
   let html = '';
+  let filasMostradas = 0;
+
   fechas.forEach(fecha => {
+    // Excluir fines de semana
+    if (esFinDeSemana(fecha)) return;
+
     const row = expedientesData[fecha] || { estado: 'Sin atender', cols: {} };
     const cols = row.cols || {};
 
-    // Comprobar filtros
-    let match = true;
-    if (fEst && row.estado !== fEst) match = false;
-
-    // Filtro por número de expediente
-    if (fNum) {
-      let foundInRow = false;
-      for (let c = 0; c < 7; c++) {
-        const list = cols[c] || [];
-        if (list.some(item => (typeof item === 'object' ? item.exp : item).toLowerCase().includes(fNum))) {
-          foundInRow = true;
-          break;
-        }
-      }
-      if (!foundInRow) match = false;
-    }
-
-    // Filtro por persona
+    // 1. Filtro por Persona: si está activo, verificar si esa persona tiene expedientes
+    let visibleCols = [0, 1, 2, 3, 4, 5, 6];
     if (fPer !== '') {
+      visibleCols = [parseInt(fPer)];
       const list = cols[fPer] || [];
-      if (!list || list.length === 0) match = false;
+      if (list.length === 0 && !fNum) {
+        // Si se filtra por persona y no tiene nada asignado ese día, no mostrar la fila (salvo que no haya filtro de fecha)
+        // Permitimos ver la fila si se desactiva fNum para poder agregarle
+      }
     }
 
-    if (!match) return;
+    // 2. Filtro por Estado Global o Individual
+    if (fEst) {
+      let tieneEstado = false;
+      visibleCols.forEach(c => {
+        const list = cols[c] || [];
+        list.forEach(item => {
+          const st = typeof item === 'object' ? (item.estado || row.estado) : row.estado;
+          if (st === fEst) tieneEstado = true;
+        });
+      });
+      if (row.estado === fEst) tieneEstado = true;
+      if (!tieneEstado) return;
+    }
 
-    // Estado class
+    // 3. Filtro por Número de Expediente: solo mostrar celdas/filas que coincidan
+    if (fNum) {
+      let tieneCoincidencia = false;
+      visibleCols.forEach(c => {
+        const list = cols[c] || [];
+        list.forEach(item => {
+          const expNum = (typeof item === 'object' ? item.exp : item).toLowerCase();
+          if (expNum.includes(fNum)) tieneCoincidencia = true;
+        });
+      });
+      if (!tieneCoincidencia) return;
+    }
+
+    filasMostradas++;
+
     let stClass = 'status-sin';
     if (row.estado === 'En proceso') stClass = 'status-proc';
     if (row.estado === 'Atendido') stClass = 'status-aten';
@@ -3290,12 +3328,25 @@ function renderTablaExpedientes() {
     html += `<tr data-fecha="${fecha}">
       <td class="col-fecha">${formatFechaDisplay(fecha)}</td>`;
 
-    for (let c = 0; c < 7; c++) {
-      const list = cols[c] || [];
+    // Renderizar únicamente las columnas visibles (una sola si hay filtro de personal)
+    visibleCols.forEach(c => {
+      const rawList = cols[c] || [];
+
+      // Si hay filtro por número, en la celda mostramos únicamente el expediente coincidente
+      let displayList = rawList;
+      if (fNum) {
+        displayList = rawList.filter(item => {
+          const expNum = (typeof item === 'object' ? item.exp : item).toLowerCase();
+          return expNum.includes(fNum);
+        });
+      }
+
       html += `<td>
         <div class="exp-cell-area">`;
 
-      list.forEach((item, idx) => {
+      displayList.forEach((item) => {
+        // Encontrar índice real para edición
+        const realIdx = rawList.indexOf(item);
         const expNum = typeof item === 'object' ? item.exp : item;
         const expSt = typeof item === 'object' ? (item.estado || 'Sin atender') : 'Sin atender';
         let bClass = 'exp-badge-sin';
@@ -3305,9 +3356,9 @@ function renderTablaExpedientes() {
         html += `<div class="exp-badge-item ${bClass}" style="flex-direction:column;align-items:stretch;gap:2px;padding:3px 5px">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
             <span style="font-weight:700">${expNum}</span>
-            <span class="badge-del" onclick="eliminarExpediente('${fecha}', ${c}, ${idx})" title="Eliminar expediente">✕</span>
+            <span class="badge-del" onclick="eliminarExpediente('${fecha}', ${c}, ${realIdx})" title="Eliminar expediente">✕</span>
           </div>
-          <select class="exp-badge-select" onchange="cambiarEstadoExpediente('${fecha}', ${c}, ${idx}, this.value)">
+          <select class="exp-badge-select" onchange="cambiarEstadoExpediente('${fecha}', ${c}, ${realIdx}, this.value)">
             <option value="Sin atender" ${expSt === 'Sin atender' ? 'selected' : ''}>🔴 Sin atender</option>
             <option value="En proceso" ${expSt === 'En proceso' ? 'selected' : ''}>🟡 En proceso</option>
             <option value="Atendido" ${expSt === 'Atendido' ? 'selected' : ''}>🟢 Atendido</option>
@@ -3318,7 +3369,7 @@ function renderTablaExpedientes() {
       html += `<button class="exp-quick-add" onclick="abrirAddExpModal('${fecha}', ${c})">+ Exp</button>
         </div>
       </td>`;
-    }
+    });
 
     html += `<td>
       <select class="status-select-cell ${stClass}" onchange="cambiarEstadoFila('${fecha}', this.value)">
@@ -3333,183 +3384,40 @@ function renderTablaExpedientes() {
     </tr>`;
   });
 
-  if (html === '') {
-    html = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">No se encontraron registros con los filtros seleccionados</td></tr>';
+  if (html === '' || filasMostradas === 0) {
+    const totalCols = (fPer !== '' ? 1 : 7) + 3;
+    html = `<tr><td colspan="${totalCols}" style="text-align:center;padding:24px;color:var(--muted)">
+      🔍 No se encontraron expedientes con los criterios seleccionados.
+    </td></tr>`;
   }
 
   tbody.innerHTML = html;
 }
 
-function filtrarExpedientes() {
-  renderTablaExpedientes();
-}
-
-function limpiarFiltrosExp() {
-  document.getElementById('filtroExpNum').value = '';
-  document.getElementById('filtroExpEstado').value = '';
-  document.getElementById('filtroExpPersona').value = '';
-  renderTablaExpedientes();
-}
-
-async function cambiarEstadoFila(fecha, nuevoEstado) {
-  if (!expedientesData[fecha]) return;
-  expedientesData[fecha].estado = nuevoEstado;
-  await saveExpedientesState();
-  renderTablaExpedientes();
-}
-
-function abrirAddExpModal(fecha, colIdx) {
-  currentCellTarget = { fecha, colIdx };
-  document.getElementById('addExpTitle').textContent = `Agregar a ${EXP_PERSONAL[colIdx]} (${formatFechaDisplay(fecha)})`;
-  document.getElementById('inputExpNumero').value = '';
-  document.getElementById('selectExpEstado').value = expedientesData[fecha]?.estado || 'Sin atender';
-  document.getElementById('modalAddExp').style.display = 'flex';
-  setTimeout(() => document.getElementById('inputExpNumero').focus(), 50);
-}
-
-function cerrarAddExpModal() {
-  document.getElementById('modalAddExp').style.display = 'none';
-  currentCellTarget = null;
-}
-
-async function guardarAddExpModal() {
-  if (!currentCellTarget) return;
-  const num = document.getElementById('inputExpNumero').value.trim();
-  const st = document.getElementById('selectExpEstado').value;
-  if (!num) {
-    showToast('⚠️ Escriba el número de expediente');
-    return;
-  }
-
-  const { fecha, colIdx } = currentCellTarget;
-  if (!expedientesData[fecha]) {
-    expedientesData[fecha] = { estado: 'Sin atender', cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] } };
-  }
-  if (!expedientesData[fecha].cols) expedientesData[fecha].cols = {};
-  if (!expedientesData[fecha].cols[colIdx]) expedientesData[fecha].cols[colIdx] = [];
-
-  expedientesData[fecha].cols[colIdx].push({ exp: num, estado: st });
-  await saveExpedientesState();
-  cerrarAddExpModal();
-  renderTablaExpedientes();
-  showToast('✅ Expediente agregado');
-}
-
-async function eliminarExpediente(fecha, colIdx, idx) {
-  if (!confirm('¿Eliminar este expediente?')) return;
-  if (expedientesData[fecha]?.cols?.[colIdx]) {
-    expedientesData[fecha].cols[colIdx].splice(idx, 1);
-    await saveExpedientesState();
-    renderTablaExpedientes();
-    showToast('🗑️ Expediente eliminado');
-  }
-}
-
-// Fechas ilimitadas
-function abrirAgregarFilaModal() {
-  const hoy = new Date().toISOString().split('T')[0];
-  document.getElementById('inputNuevaFechaVal').value = hoy;
-  document.getElementById('modalNuevaFecha').style.display = 'flex';
-}
-
-function cerrarNuevaFechaModal() {
-  document.getElementById('modalNuevaFecha').style.display = 'none';
-}
-
-async function guardarNuevaFechaModal() {
-  const f = document.getElementById('inputNuevaFechaVal').value;
-  if (!f) return;
-  if (esFinDeSemana(f)) {
-    showToast('⚠️ Solo se admiten días de Lunes a Viernes');
-    return;
-  }
-  if (expedientesData[f]) {
-    showToast('⚠️ Esa fecha ya existe en la tabla');
-    return;
-  }
-  expedientesData[f] = {
-    estado: 'Sin atender',
-    cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] }
-  };
-  await saveExpedientesState();
-  cerrarNuevaFechaModal();
-  renderTablaExpedientes();
-  showToast('✅ Fecha ' + formatFechaDisplay(f) + ' agregada');
-}
-
-function agregarProximaSemana() {
-  const fechas = Object.keys(expedientesData).sort();
-  let ultima = fechas.length > 0 ? new Date(fechas[fechas.length - 1] + 'T00:00:00') : new Date();
-  let agregadas = 0;
-  let cursor = new Date(ultima);
-
-  while (agregadas < 5) {
-    cursor.setDate(cursor.getDate() + 1);
-    const day = cursor.getDay();
-    if (day !== 0 && day !== 6) { // Lunes a Viernes
-      const iso = cursor.toISOString().split('T')[0];
-      if (!expedientesData[iso]) {
-        expedientesData[iso] = {
-          estado: 'Sin atender',
-          cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] }
-        };
-        agregadas++;
-      }
-    }
-  }
-  saveExpedientesState();
-  renderTablaExpedientes();
-  showToast('✅ Agregados 5 días hábiles siguientes');
-}
-
-async function eliminarFilaFecha(fecha) {
-  if (!confirm(`¿Eliminar la fila completa del ${formatFechaDisplay(fecha)}?`)) return;
-  delete expedientesData[fecha];
-  await saveExpedientesState();
-  renderTablaExpedientes();
-  showToast('🗑️ Fila eliminada');
-}
-
-// Exportar a Excel
-function exportarExpedientesExcel() {
-  if (typeof XLSX === 'undefined') {
-    alert('Biblioteca Excel cargándose, reintente en un momento');
-    return;
-  }
-
-  const rows = [
-    ["Fecha", ...EXP_PERSONAL, "Estado"]
-  ];
-
-  const fechas = Object.keys(expedientesData).sort();
-  fechas.forEach(f => {
-    const r = expedientesData[f] || {};
-    const cols = r.cols || {};
-    const row = [formatFechaDisplay(f)];
-
-    for (let c = 0; c < 7; c++) {
-      const list = cols[c] || [];
-      const expStr = list.map(it => typeof it === 'object' ? it.exp : it).join(', ');
-      row.push(expStr);
-    }
-    row.push(r.estado || 'Sin atender');
-    rows.push(row);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
-  XLSX.writeFile(wb, "Control_Expedientes_JUSHMRCB.xlsx");
-}
-
-function imprimirExpedientesPDF() {
-  window.print();
-}
-
-// Histograma con Chart.js
 function abrirHistograma() {
-  const modal = document.getElementById('modalHisto');
-  modal.classList.add('open');
+  document.getElementById('modalHisto').classList.add('open');
+  actualizarHistograma();
+}
+
+function actualizarHistograma() {
+  const rango = document.getElementById('histoRangoSelect')?.value || 'mes';
+  const fechasTodas = Object.keys(expedientesData).sort();
+
+  // Determinar rango de fechas
+  let fechaInicioStr = '';
+  const hoy = new Date();
+
+  if (rango === '15d') {
+    // 15 días atrás
+    const d15 = new Date();
+    d15.setDate(d15.getDate() - 15);
+    fechaInicioStr = d15.toISOString().split('T')[0];
+  } else if (rango === 'mes') {
+    // Mes actual o mes de los datos más recientes
+    const ultimoRegistro = fechasTodas.length > 0 ? fechasTodas[fechasTodas.length - 1] : hoy.toISOString().split('T')[0];
+    const anioMes = ultimoRegistro.substring(0, 7); // ej '2026-11'
+    fechaInicioStr = anioMes + '-01';
+  }
 
   const sinAtenderCounts = [0,0,0,0,0,0,0];
   const enProcesoCounts = [0,0,0,0,0,0,0];
@@ -3520,14 +3428,16 @@ function abrirHistograma() {
   let totalProc = 0;
   let totalAten = 0;
 
-  Object.values(expedientesData).forEach(r => {
-    const rowEst = r.estado || 'Sin atender';
+  fechasTodas.forEach(f => {
+    if (fechaInicioStr && f < fechaInicioStr) return;
+
+    const r = expedientesData[f] || {};
     const cols = r.cols || {};
     for (let c = 0; c < 7; c++) {
       const list = cols[c] || [];
       list.forEach(item => {
         totalGeneral++;
-        const st = typeof item === 'object' ? (item.estado || rowEst) : rowEst;
+        const st = typeof item === 'object' ? (item.estado || 'Sin atender') : 'Sin atender';
         if (st === 'Sin atender') { sinAtenderCounts[c]++; totalSin++; }
         else if (st === 'En proceso') { enProcesoCounts[c]++; totalProc++; }
         else if (st === 'Atendido') { atendidoCounts[c]++; totalAten++; }
@@ -3540,6 +3450,8 @@ function abrirHistograma() {
 
   const isDark = document.body.classList.contains('dark');
   const textColor = isDark ? '#e2e8f0' : '#1e293b';
+
+  const labelRango = rango === '15d' ? 'Últimos 15 Días' : (rango === 'mes' ? 'Mes Completo' : 'Histórico Total');
 
   expChartInstance = new Chart(ctx, {
     type: 'bar',
@@ -3562,7 +3474,7 @@ function abrirHistograma() {
         legend: { labels: { color: textColor } },
         title: {
           display: true,
-          text: 'Distribución de Expedientes Asignados por Responsable',
+          text: `Distribución de Expedientes por Responsable (${labelRango})`,
           color: textColor,
           font: { size: 14, weight: 'bold' }
         }
@@ -3573,7 +3485,7 @@ function abrirHistograma() {
   document.getElementById('histoStats').innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px">
       <div style="font-size:18px;font-weight:700">${totalGeneral}</div>
-      <div style="font-size:11px;color:var(--muted)">Total Expedientes</div>
+      <div style="font-size:11px;color:var(--muted)">Expedientes (${labelRango})</div>
     </div>
     <div style="background:#fee2e2;border:1px solid #f87171;border-radius:6px;padding:8px;color:#991b1b">
       <div style="font-size:18px;font-weight:700">${totalSin}</div>
