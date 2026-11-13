@@ -759,13 +759,25 @@ document.getElementById('waterDrop').addEventListener('click', function(){
   <div class="histo-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;flex-wrap:wrap;gap:8px">
       <h3 style="font-size:16px">📊 Histograma de Expedientes</h3>
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-size:12px;font-weight:700">Período:</label>
-        <select id="histoRangoSelect" class="exp-input" style="font-size:12px;padding:3px 8px" onchange="actualizarHistograma()">
-          <option value="15d">Últimos 15 días</option>
-          <option value="mes" selected>Mes Completo (Actual)</option>
-          <option value="todo">Histórico Completo</option>
-        </select>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;font-weight:700">Filtro:</label>
+          <select id="histoRangoSelect" class="exp-input" style="font-size:12px;padding:4px 8px" onchange="cambiarTipoFiltroHistograma()">
+            <option value="mes_especifico" selected>📅 Por Mes Específico</option>
+            <option value="15d">⏱️ Últimos 15 días</option>
+            <option value="todo">📊 Todo el Historial</option>
+          </select>
+        </div>
+        <div id="wrapHistoMesPicker" style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:12px;font-weight:700">Mes:</label>
+          <select id="histoMesSelect" class="exp-input" style="font-size:12px;padding:4px 8px" onchange="actualizarHistograma()">
+            <option value="2026-10">Octubre 2026</option>
+            <option value="2026-11" selected>Noviembre 2026</option>
+            <option value="2026-12">Diciembre 2026</option>
+            <option value="2027-01">Enero 2027</option>
+            <option value="2027-02">Febrero 2027</option>
+          </select>
+        </div>
         <button class="btn btn-ghost btn-sm" onclick="cerrarHistograma()" style="border:1px solid var(--border);color:var(--text)">✕ Cerrar</button>
       </div>
     </div>
@@ -3682,48 +3694,95 @@ function imprimirExpedientesPDF() {
   window.print();
 }
 
-function abrirHistograma() {
-  document.getElementById('modalHisto').classList.add('open');
+function cambiarTipoFiltroHistograma() {
+  const tipo = document.getElementById('histoRangoSelect')?.value;
+  const wrap = document.getElementById('wrapHistoMesPicker');
+  if (wrap) {
+    wrap.style.display = (tipo === 'mes_especifico') ? 'flex' : 'none';
+  }
   actualizarHistograma();
 }
 
+function abrirHistograma() {
+  document.getElementById('modalHisto').classList.add('open');
+  // Asegurar que las opciones de meses incluyan todos los meses presentes en los datos
+  poblarSelectMesesHistograma();
+  actualizarHistograma();
+}
+
+function poblarSelectMesesHistograma() {
+  const sel = document.getElementById('histoMesSelect');
+  if (!sel) return;
+
+  const mesesSet = new Set();
+  Object.keys(expedientesData).forEach(f => {
+    if (f.length >= 7) mesesSet.add(f.substring(0, 7));
+  });
+
+  const mesesArray = Array.from(mesesSet).sort();
+  const nombresMes = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre"];
+
+  let html = '';
+  const mesActual = new Date().toISOString().substring(0, 7);
+  let seleccionado = sel.value || (mesesArray.includes(mesActual) ? mesActual : mesesArray[mesesArray.length - 1]);
+
+  mesesArray.forEach(m => {
+    const [y, mm] = m.split('-').map(Number);
+    const nom = `${nombresMes[mm - 1]} ${y}`;
+    html += `<option value="${m}" ${m === seleccionado ? 'selected' : ''}>${nom}</option>`;
+  });
+
+  if (html) sel.innerHTML = html;
+}
+
 function actualizarHistograma() {
-  const rango = document.getElementById('histoRangoSelect')?.value || 'mes';
+  const tipo = document.getElementById('histoRangoSelect')?.value || 'mes_especifico';
+  const mesElegido = document.getElementById('histoMesSelect')?.value || '2026-11';
+  const wrap = document.getElementById('wrapHistoMesPicker');
+  if (wrap) wrap.style.display = (tipo === 'mes_especifico') ? 'flex' : 'none';
+
   const fechasTodas = Object.keys(expedientesData).sort();
 
-  // Determinar rango de fechas
-  let fechaInicioStr = '';
-  const hoy = new Date();
-
-  if (rango === '15d') {
-    // 15 días atrás
-    const d15 = new Date();
-    d15.setDate(d15.getDate() - 15);
-    fechaInicioStr = d15.toISOString().split('T')[0];
-  } else if (rango === 'mes') {
-    // Mes actual o mes de los datos más recientes
-    const ultimoRegistro = fechasTodas.length > 0 ? fechasTodas[fechasTodas.length - 1] : hoy.toISOString().split('T')[0];
-    const anioMes = ultimoRegistro.substring(0, 7); // ej '2026-11'
-    fechaInicioStr = anioMes + '-01';
-  }
-
-  const sinAtenderCounts = [0,0,0,0,0,0,0];
-  const enProcesoCounts = [0,0,0,0,0,0,0];
-  const atendidoCounts = [0,0,0,0,0,0,0];
+  const sinAtenderCounts = [0, 0, 0, 0, 0, 0, 0];
+  const enProcesoCounts = [0, 0, 0, 0, 0, 0, 0];
+  const atendidoCounts = [0, 0, 0, 0, 0, 0, 0];
 
   let totalGeneral = 0;
   let totalSin = 0;
   let totalProc = 0;
   let totalAten = 0;
 
+  // Filtro de rango de fecha
+  let labelPeriodo = '';
+  if (tipo === 'mes_especifico') {
+    const [y, mm] = mesElegido.split('-').map(Number);
+    const nombresMes = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre"];
+    labelPeriodo = `Mes de ${nombresMes[mm - 1]} ${y}`;
+  } else if (tipo === '15d') {
+    labelPeriodo = 'Últimos 15 Días';
+  } else {
+    labelPeriodo = 'Histórico Total';
+  }
+
+  const hoy = new Date();
+  const d15 = new Date();
+  d15.setDate(d15.getDate() - 15);
+  const d15Str = d15.toISOString().split('T')[0];
+
   fechasTodas.forEach(f => {
-    if (fechaInicioStr && f < fechaInicioStr) return;
+    if (esFinDeSemana(f)) return;
+
+    // Validación según filtro
+    if (tipo === 'mes_especifico' && !f.startsWith(mesElegido)) return;
+    if (tipo === '15d' && f < d15Str) return;
 
     const r = expedientesData[f] || {};
     const cols = r.cols || {};
+
     for (let c = 0; c < 7; c++) {
       const list = cols[c] || [];
       list.forEach(item => {
+        if (!item) return;
         totalGeneral++;
         const st = typeof item === 'object' ? (item.estado || 'Sin atender') : 'Sin atender';
         if (st === 'Sin atender') { sinAtenderCounts[c]++; totalSin++; }
@@ -3739,12 +3798,13 @@ function actualizarHistograma() {
   const isDark = document.body.classList.contains('dark');
   const textColor = isDark ? '#e2e8f0' : '#1e293b';
 
-  const labelRango = rango === '15d' ? 'Últimos 15 Días' : (rango === 'mes' ? 'Mes Completo' : 'Histórico Total');
-
   expChartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: EXP_PERSONAL.map(p => p.split(' ')[0] + ' ' + (p.split(' ')[1] || '')),
+      labels: EXP_PERSONAL.map(p => {
+        const parts = p.split(' ');
+        return parts[0] + ' ' + (parts[1] || '');
+      }),
       datasets: [
         { label: '🔴 Sin atender', data: sinAtenderCounts, backgroundColor: '#ef4444' },
         { label: '🟡 En proceso', data: enProcesoCounts, backgroundColor: '#facc15' },
@@ -3755,14 +3815,14 @@ function actualizarHistograma() {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { stacked: true, ticks: { color: textColor } },
-        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, color: textColor } }
+        x: { stacked: true, ticks: { color: textColor, font: { weight: 'bold', size: 11 } } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, color: textColor, font: { weight: 'bold' } } }
       },
       plugins: {
-        legend: { labels: { color: textColor } },
+        legend: { labels: { color: textColor, font: { size: 12, weight: 'bold' } } },
         title: {
           display: true,
-          text: `Distribución de Expedientes por Responsable (${labelRango})`,
+          text: `Distribución de Expedientes por Responsable - ${labelPeriodo}`,
           color: textColor,
           font: { size: 14, weight: 'bold' }
         }
@@ -3772,20 +3832,20 @@ function actualizarHistograma() {
 
   document.getElementById('histoStats').innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px">
-      <div style="font-size:18px;font-weight:700">${totalGeneral}</div>
-      <div style="font-size:11px;color:var(--muted)">Expedientes (${labelRango})</div>
+      <div style="font-size:20px;font-weight:700">${totalGeneral}</div>
+      <div style="font-size:11.5px;color:var(--muted)">Expedientes (${labelPeriodo})</div>
     </div>
     <div style="background:#fee2e2;border:1px solid #f87171;border-radius:6px;padding:8px;color:#991b1b">
-      <div style="font-size:18px;font-weight:700">${totalSin}</div>
-      <div style="font-size:11px">Sin atender</div>
+      <div style="font-size:20px;font-weight:700">${totalSin}</div>
+      <div style="font-size:11.5px;font-weight:600">Sin atender</div>
     </div>
     <div style="background:#fef9c3;border:1px solid #facc15;border-radius:6px;padding:8px;color:#854d0e">
-      <div style="font-size:18px;font-weight:700">${totalProc}</div>
-      <div style="font-size:11px">En proceso</div>
+      <div style="font-size:20px;font-weight:700">${totalProc}</div>
+      <div style="font-size:11.5px;font-weight:600">En proceso</div>
     </div>
     <div style="background:#dcfce7;border:1px solid #4ade80;border-radius:6px;padding:8px;color:#166534">
-      <div style="font-size:18px;font-weight:700">${totalAten}</div>
-      <div style="font-size:11px">Atendidos</div>
+      <div style="font-size:20px;font-weight:700">${totalAten}</div>
+      <div style="font-size:11.5px;font-weight:600">Atendidos</div>
     </div>
   `;
 }
