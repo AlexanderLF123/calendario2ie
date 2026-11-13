@@ -363,6 +363,18 @@ body::after{
 }
 
 /* ===================== CONTROL DE EXPEDIENTES ===================== */
+.exp-badge-select {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 3px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.15);
+  background: rgba(255,255,255,0.85);
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+}
+
 #expedientesPanel {
   display: none;
   flex: 1;
@@ -693,6 +705,7 @@ document.getElementById('waterDrop').addEventListener('click', function(){
         <span><span class="leg-dot leg-aten"></span>Atendido</span>
       </div>
       <button class="btn btn-navy btn-sm" onclick="abrirAgregarFilaModal()">➕ Agregar Fecha</button>
+      <button class="btn btn-ghost btn-sm" style="border:1px solid var(--border);color:var(--text)" onclick="agregarProximaSemana()" title="Añade automáticamente la siguiente semana hábil">📅 + Próximos 5 días</button>
       <button class="btn btn-ghost btn-sm" style="border:1px solid var(--border);color:var(--text)" onclick="abrirHistograma()">📊 Histograma</button>
       <button class="btn btn-success btn-sm" onclick="exportarExpedientesExcel()">📥 Excel</button>
       <button class="btn btn-amber btn-sm" onclick="imprimirExpedientesPDF()">🖨️ PDF / Imprimir</button>
@@ -3043,6 +3056,18 @@ let expedientesData = {};
 let expChartInstance = null;
 let currentCellTarget = null; // { fecha, colIdx }
 
+
+function purgarFinesDeSemana() {
+  let changed = false;
+  Object.keys(expedientesData).forEach(f => {
+    if (esFinDeSemana(f)) {
+      delete expedientesData[f];
+      changed = true;
+    }
+  });
+  if (changed) saveExpedientesState();
+}
+
 function switchMainTab(tab) {
   const calArea = document.querySelector('.main-area');
   const expArea = document.getElementById('expedientesPanel');
@@ -3065,13 +3090,13 @@ function switchMainTab(tab) {
 
 // Carga de datos iniciales idénticos a la tabla proporcionada
 function getInitialExpedientesState() {
+  // Generar fechas hábiles (Lunes a Viernes) sin sábados ni domingos
   const initialDates = [
-    "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17",
-    "2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22",
-    "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27",
-    "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01",
+    "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16",
+    "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23",
+    "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30",
     "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06",
-    "2026-11-07", "2026-11-08", "2026-11-09"
+    "2026-11-09"
   ];
 
   const state = {};
@@ -3199,10 +3224,21 @@ async function saveExpedientesState() {
   }
 }
 
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
 function formatFechaDisplay(yyyyMmDd) {
   if (!yyyyMmDd || !yyyyMmDd.includes('-')) return yyyyMmDd;
-  const [y, m, d] = yyyyMmDd.split('-');
-  return `${parseInt(d)}/${parseInt(m)}/${y}`;
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const diaNombre = DIAS_SEMANA[dt.getDay()];
+  return `${diaNombre} ${d}/${m}/${y}`;
+}
+
+function esFinDeSemana(yyyyMmDd) {
+  if (!yyyyMmDd || !yyyyMmDd.includes('-')) return false;
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  const day = new Date(y, m - 1, d).getDay();
+  return day === 0 || day === 6; // Domingo=0, Sábado=6
 }
 
 function renderTablaExpedientes() {
@@ -3261,14 +3297,21 @@ function renderTablaExpedientes() {
 
       list.forEach((item, idx) => {
         const expNum = typeof item === 'object' ? item.exp : item;
-        const expSt = typeof item === 'object' ? (item.estado || row.estado) : row.estado;
+        const expSt = typeof item === 'object' ? (item.estado || 'Sin atender') : 'Sin atender';
         let bClass = 'exp-badge-sin';
         if (expSt === 'En proceso') bClass = 'exp-badge-proc';
         if (expSt === 'Atendido') bClass = 'exp-badge-aten';
 
-        html += `<div class="exp-badge-item ${bClass}" title="${expSt}">
-          <span>${expNum}</span>
-          <span class="badge-del" onclick="eliminarExpediente('${fecha}', ${c}, ${idx})" title="Eliminar expediente">✕</span>
+        html += `<div class="exp-badge-item ${bClass}" style="flex-direction:column;align-items:stretch;gap:2px;padding:3px 5px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+            <span style="font-weight:700">${expNum}</span>
+            <span class="badge-del" onclick="eliminarExpediente('${fecha}', ${c}, ${idx})" title="Eliminar expediente">✕</span>
+          </div>
+          <select class="exp-badge-select" onchange="cambiarEstadoExpediente('${fecha}', ${c}, ${idx}, this.value)">
+            <option value="Sin atender" ${expSt === 'Sin atender' ? 'selected' : ''}>🔴 Sin atender</option>
+            <option value="En proceso" ${expSt === 'En proceso' ? 'selected' : ''}>🟡 En proceso</option>
+            <option value="Atendido" ${expSt === 'Atendido' ? 'selected' : ''}>🟢 Atendido</option>
+          </select>
         </div>`;
       });
 
@@ -3376,6 +3419,10 @@ function cerrarNuevaFechaModal() {
 async function guardarNuevaFechaModal() {
   const f = document.getElementById('inputNuevaFechaVal').value;
   if (!f) return;
+  if (esFinDeSemana(f)) {
+    showToast('⚠️ Solo se admiten días de Lunes a Viernes');
+    return;
+  }
   if (expedientesData[f]) {
     showToast('⚠️ Esa fecha ya existe en la tabla');
     return;
@@ -3387,7 +3434,32 @@ async function guardarNuevaFechaModal() {
   await saveExpedientesState();
   cerrarNuevaFechaModal();
   renderTablaExpedientes();
-  showToast('✅ Fecha agregada a la matriz');
+  showToast('✅ Fecha ' + formatFechaDisplay(f) + ' agregada');
+}
+
+function agregarProximaSemana() {
+  const fechas = Object.keys(expedientesData).sort();
+  let ultima = fechas.length > 0 ? new Date(fechas[fechas.length - 1] + 'T00:00:00') : new Date();
+  let agregadas = 0;
+  let cursor = new Date(ultima);
+
+  while (agregadas < 5) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) { // Lunes a Viernes
+      const iso = cursor.toISOString().split('T')[0];
+      if (!expedientesData[iso]) {
+        expedientesData[iso] = {
+          estado: 'Sin atender',
+          cols: { "0":[], "1":[], "2":[], "3":[], "4":[], "5":[], "6":[] }
+        };
+        agregadas++;
+      }
+    }
+  }
+  saveExpedientesState();
+  renderTablaExpedientes();
+  showToast('✅ Agregados 5 días hábiles siguientes');
 }
 
 async function eliminarFilaFecha(fecha) {
