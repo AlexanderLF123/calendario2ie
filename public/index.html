@@ -581,16 +581,224 @@ body::after{
 }
 
 @media print {
-  .header, .exp-toolbar, .exp-quick-add, .badge-del, .hbtns, .btn {
+  .header, .exp-toolbar, .exp-quick-add, .badge-del, .hbtns, .btn, .com-toolbar, .com-pills, .com-del-btn, .com-add-row-btn {
     display: none !important;
   }
-  #expedientesPanel {
+  #expedientesPanel, #comisionesPanel {
     padding: 0;
   }
-  .exp-table-wrap {
+  .exp-table-wrap, .com-table-wrap {
     overflow: visible;
     border: none;
   }
+}
+
+/* ===================== COMISIONES DE USUARIOS ===================== */
+#comisionesPanel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  padding: 14px 18px;
+  gap: 12px;
+}
+#comisionesPanel.active-tab {
+  display: flex;
+}
+.com-toolbar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 4px var(--shadow);
+}
+.com-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.com-input {
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.com-input:focus {
+  border-color: var(--c1);
+}
+.com-pills {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 2px 2px 6px 2px;
+}
+.com-pill {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+  transition: all .15s;
+  user-select: none;
+}
+.com-pill:hover {
+  background: var(--navy3);
+  color: #fff;
+}
+.com-pill.active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+body.dark .com-pill.active {
+  background: var(--amber);
+  color: var(--navy);
+  border-color: var(--amber);
+}
+.com-table-wrap {
+  flex: 1;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 4px var(--shadow);
+  position: relative;
+}
+.com-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 1300px;
+}
+.com-table th, .com-table td {
+  border: 1px solid var(--border);
+  padding: 5px 6px;
+  text-align: left;
+}
+.com-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.com-table th.main-title-th {
+  background: #bdd7ee;
+  color: #1e3a8a;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px;
+  letter-spacing: .06em;
+  border-bottom: 2px solid #93c5fd;
+}
+body.dark .com-table th.main-title-th {
+  background: #1e3a5f;
+  color: #93c5fd;
+  border-bottom-color: #3b82f6;
+}
+.com-table th.com-name-th {
+  background: var(--navy);
+  color: #fff;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 6px;
+  letter-spacing: .04em;
+}
+.com-table th.sub-th {
+  background: var(--navy2);
+  color: #f1f5f9;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 4px;
+}
+.com-cell-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+}
+.com-cell-input:hover {
+  border-color: var(--border);
+  background: var(--bg);
+}
+.com-cell-input:focus {
+  border-color: var(--c1);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--c1);
+}
+.com-date-input {
+  width: 125px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 5px;
+  font-size: 11.5px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+.com-date-input:focus {
+  border-color: var(--c1);
+}
+.com-del-btn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all .15s;
+}
+.com-del-btn:hover {
+  background: #fee2e2;
+}
+body.dark .com-del-btn:hover {
+  background: #450a0a;
+}
+.com-add-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px dashed var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.com-add-row-btn:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: #eff6ff;
+}
+body.dark .com-add-row-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(245,158,11,.15);
 }
 
 </style>
@@ -657,6 +865,7 @@ document.getElementById('waterDrop').addEventListener('click', function(){
     
     <button class="btn btn-ghost btn-sm main-tab-btn active" id="btnTabCal" onclick="switchMainTab('cal')">📅 Calendario</button>
     <button class="btn btn-amber btn-sm main-tab-btn" id="btnTabExp" onclick="switchMainTab('exp')">📁 Expedientes</button>
+    <button class="btn btn-ghost btn-sm main-tab-btn" id="btnTabCom" onclick="switchMainTab('com')">🌊 Comisiones de Usuarios</button>
     <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
     <button class="btn btn-ghost btn-sm" onclick="openModal()">⚙️ Conductores</button>
     <button class="btn btn-ghost btn-sm" onclick="openReuniones()">📋 Reuniones</button>
@@ -712,6 +921,62 @@ document.getElementById('waterDrop').addEventListener('click', function(){
       <tbody id="tbodyExpedientes">
         <!-- Generado dinámicamente -->
       </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- COMISIONES DE USUARIOS PANEL -->
+<div id="comisionesPanel">
+  <div class="com-toolbar">
+    <div class="com-filters">
+      <span style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:4px">🔍 Buscar:</span>
+      <input type="text" id="filtroComTexto" class="com-input" placeholder="Buscar canal o descripción..." style="width:220px" oninput="filtrarComisiones()">
+      <span style="font-weight:700;font-size:12px;color:var(--muted);margin-left:6px">Comisión:</span>
+      <select id="filtroComSelect" class="com-input" onchange="seleccionarComision(this.value)">
+        <option value="TODAS">🏢 Todas las Comisiones</option>
+        <option value="ATE">ATE</option>
+        <option value="SURCO">SURCO</option>
+        <option value="CHOSICA">CHOSICA</option>
+        <option value="CHACRASANA">CHACRASANA</option>
+        <option value="CHACLACAYO">CHACLACAYO</option>
+        <option value="LA ESTRELLA">LA ESTRELLA</option>
+        <option value="ÑAÑA">ÑAÑA</option>
+        <option value="CARAPONGO">CARAPONGO</option>
+        <option value="HUACHIPA">HUACHIPA</option>
+        <option value="NIEVERÍA">NIEVERÍA</option>
+        <option value="RICARDO PALMA">RICARDO PALMA</option>
+        <option value="PARCA">PARCA</option>
+      </select>
+      <button class="btn btn-navy btn-sm" onclick="agregarFilaComisionActual()">➕ Nueva Fila</button>
+      <span id="comSaveStatus" style="font-size:11px;font-weight:600;color:#10b981;margin-left:8px;display:none">💾 Guardado</span>
+    </div>
+
+    <div class="exp-actions">
+      <button class="btn btn-success btn-sm" onclick="exportarComisionesExcel()">📥 Excel</button>
+      <button class="btn btn-amber btn-sm" onclick="imprimirComisionesPDF()">🖨️ PDF / Imprimir</button>
+    </div>
+  </div>
+
+  <!-- Pestañas de acceso rápido a cada comisión -->
+  <div class="com-pills" id="comPills">
+    <div class="com-pill active" onclick="seleccionarComision('TODAS')">🏢 Todas</div>
+    <div class="com-pill" onclick="seleccionarComision('ATE')">ATE</div>
+    <div class="com-pill" onclick="seleccionarComision('SURCO')">SURCO</div>
+    <div class="com-pill" onclick="seleccionarComision('CHOSICA')">CHOSICA</div>
+    <div class="com-pill" onclick="seleccionarComision('CHACRASANA')">CHACRASANA</div>
+    <div class="com-pill" onclick="seleccionarComision('CHACLACAYO')">CHACLACAYO</div>
+    <div class="com-pill" onclick="seleccionarComision('LA ESTRELLA')">LA ESTRELLA</div>
+    <div class="com-pill" onclick="seleccionarComision('ÑAÑA')">ÑAÑA</div>
+    <div class="com-pill" onclick="seleccionarComision('CARAPONGO')">CARAPONGO</div>
+    <div class="com-pill" onclick="seleccionarComision('HUACHIPA')">HUACHIPA</div>
+    <div class="com-pill" onclick="seleccionarComision('NIEVERÍA')">NIEVERÍA</div>
+    <div class="com-pill" onclick="seleccionarComision('RICARDO PALMA')">RICARDO PALMA</div>
+    <div class="com-pill" onclick="seleccionarComision('PARCA')">PARCA</div>
+  </div>
+
+  <div class="com-table-wrap">
+    <table class="com-table" id="tablaComisiones">
+      <!-- Generado dinámicamente -->
     </table>
   </div>
 </div>
@@ -3073,20 +3338,30 @@ function purgarFinesDeSemana() {
 function switchMainTab(tab) {
   const calArea = document.querySelector('.main-area');
   const expArea = document.getElementById('expedientesPanel');
+  const comArea = document.getElementById('comisionesPanel');
   const btnCal = document.getElementById('btnTabCal');
   const btnExp = document.getElementById('btnTabExp');
+  const btnCom = document.getElementById('btnTabCom');
+
+  calArea.style.display = 'none';
+  if (expArea) expArea.classList.remove('active-tab');
+  if (comArea) comArea.classList.remove('active-tab');
+
+  if (btnCal) btnCal.className = 'btn btn-ghost btn-sm main-tab-btn';
+  if (btnExp) btnExp.className = 'btn btn-ghost btn-sm main-tab-btn';
+  if (btnCom) btnCom.className = 'btn btn-ghost btn-sm main-tab-btn';
 
   if (tab === 'exp') {
-    calArea.style.display = 'none';
-    expArea.classList.add('active-tab');
-    btnCal.className = 'btn btn-ghost btn-sm main-tab-btn';
-    btnExp.className = 'btn btn-amber btn-sm main-tab-btn active';
+    if (expArea) expArea.classList.add('active-tab');
+    if (btnExp) btnExp.className = 'btn btn-amber btn-sm main-tab-btn active';
     renderTablaExpedientes();
+  } else if (tab === 'com') {
+    if (comArea) comArea.classList.add('active-tab');
+    if (btnCom) btnCom.className = 'btn btn-amber btn-sm main-tab-btn active';
+    renderComisionesUsuarios();
   } else {
-    expArea.classList.remove('active-tab');
     calArea.style.display = '';
-    btnCal.className = 'btn btn-amber btn-sm main-tab-btn active';
-    btnExp.className = 'btn btn-ghost btn-sm main-tab-btn';
+    if (btnCal) btnCal.className = 'btn btn-amber btn-sm main-tab-btn active';
   }
 }
 
@@ -3947,7 +4222,431 @@ function cerrarHistograma() {
 }
 
 initApp();
+
+// ===================== COMISIONES DE USUARIOS (JUSHMRCB) =====================
+const COMISIONES_LIST = [
+  'ATE',
+  'SURCO',
+  'CHOSICA',
+  'CHACRASANA',
+  'CHACLACAYO',
+  'LA ESTRELLA',
+  'ÑAÑA',
+  'CARAPONGO',
+  'HUACHIPA',
+  'NIEVERÍA',
+  'RICARDO PALMA',
+  'PARCA'
+];
+
+let comisionesData = {};
+let comisionSeleccionada = 'TODAS';
+let comisionDebounceTimer = null;
+
+function getInitialComisionesState() {
+  const state = {};
+  COMISIONES_LIST.forEach(com => {
+    state[com] = [
+      { id: 'c_' + com + '_1', inicio: '', fin: '', canal: '', descripcion: '' },
+      { id: 'c_' + com + '_2', inicio: '', fin: '', canal: '', descripcion: '' },
+      { id: 'c_' + com + '_3', inicio: '', fin: '', canal: '', descripcion: '' }
+    ];
+  });
+  return state;
+}
+
+function normalizeComisionesData(val) {
+  if (!val || typeof val !== 'object') return getInitialComisionesState();
+  const res = {};
+  COMISIONES_LIST.forEach(com => {
+    let arr = [];
+    if (Array.isArray(val[com])) {
+      arr = val[com];
+    } else if (val[com] && typeof val[com] === 'object') {
+      arr = Object.values(val[com]);
+    }
+    res[com] = arr.map((item, idx) => ({
+      id: item && item.id ? item.id : ('c_' + com + '_' + (idx + 1)),
+      inicio: (item && item.inicio) || '',
+      fin: (item && item.fin) || '',
+      canal: (item && item.canal) || '',
+      descripcion: (item && item.descripcion) || ''
+    }));
+    if (res[com].length === 0) {
+      res[com] = [
+        { id: 'c_' + com + '_1', inicio: '', fin: '', canal: '', descripcion: '' },
+        { id: 'c_' + com + '_2', inicio: '', fin: '', canal: '', descripcion: '' },
+        { id: 'c_' + com + '_3', inicio: '', fin: '', canal: '', descripcion: '' }
+      ];
+    }
+  });
+  return res;
+}
+
+async function loadComisionesFromFirebase() {
+  try {
+    const fireDb = window.db || (typeof db !== 'undefined' ? db : null);
+    if (fireDb) {
+      const snap = await fireDb.ref('comisiones_usuarios').once('value');
+      const val = snap.val();
+      if (val && Object.keys(val).length > 0) {
+        comisionesData = normalizeComisionesData(val);
+      } else {
+        comisionesData = getInitialComisionesState();
+        await fireDb.ref('comisiones_usuarios').set(comisionesData);
+      }
+    } else {
+      const local = localStorage.getItem('comisiones_usuarios_data');
+      comisionesData = local ? normalizeComisionesData(JSON.parse(local)) : getInitialComisionesState();
+    }
+  } catch (e) {
+    console.error('Error cargando comisiones:', e);
+    comisionesData = getInitialComisionesState();
+  }
+
+  // Listener en tiempo real entre PCs
+  const fireDb = window.db || (typeof db !== 'undefined' ? db : null);
+  if (fireDb) {
+    fireDb.ref('comisiones_usuarios').on('value', snap => {
+      const v = snap.val();
+      if (v) {
+        comisionesData = normalizeComisionesData(v);
+        const panel = document.getElementById('comisionesPanel');
+        if (panel && panel.classList.contains('active-tab')) {
+          const focused = document.activeElement;
+          const isEditing = focused && focused.closest && focused.closest('#tablaComisiones');
+          if (!isEditing) {
+            renderComisionesUsuarios();
+          }
+        }
+      }
+    });
+  }
+}
+
+async function saveComisionesToFirebase() {
+  try {
+    localStorage.setItem('comisiones_usuarios_data', JSON.stringify(comisionesData));
+    const fireDb = window.db || (typeof db !== 'undefined' ? db : null);
+    if (fireDb) {
+      await fireDb.ref('comisiones_usuarios').set(comisionesData);
+    }
+    const st = document.getElementById('comSaveStatus');
+    if (st) {
+      st.style.display = 'inline';
+      st.textContent = '💾 Guardado';
+      st.style.color = '#10b981';
+      setTimeout(() => { if (st) st.style.display = 'none'; }, 2000);
+    }
+  } catch (e) {
+    console.error('Error guardando comisiones en Firebase:', e);
+    const st = document.getElementById('comSaveStatus');
+    if (st) {
+      st.style.display = 'inline';
+      st.textContent = '⚠️ Error al guardar';
+      st.style.color = '#dc2626';
+    }
+  }
+}
+
+function scheduleSaveComisiones() {
+  const st = document.getElementById('comSaveStatus');
+  if (st) {
+    st.style.display = 'inline';
+    st.textContent = '⏳ Guardando...';
+    st.style.color = 'var(--amber)';
+  }
+  clearTimeout(comisionDebounceTimer);
+  comisionDebounceTimer = setTimeout(() => {
+    saveComisionesToFirebase();
+  }, 400);
+}
+
+function escapeComAttr(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function seleccionarComision(com) {
+  comisionSeleccionada = com;
+  const select = document.getElementById('filtroComSelect');
+  if (select) select.value = com;
+  const pills = document.querySelectorAll('.com-pill');
+  pills.forEach(p => {
+    const txt = p.textContent.replace('🏢 ', '').trim();
+    if (com === 'TODAS' && txt === 'Todas') {
+      p.classList.add('active');
+    } else if (txt === com) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
+  renderComisionesUsuarios();
+}
+
+function filtrarComisiones() {
+  renderComisionesUsuarios();
+}
+
+function updateComisionField(comision, index, field, value) {
+  if (!comisionesData[comision]) comisionesData[comision] = [];
+  while (comisionesData[comision].length <= index) {
+    comisionesData[comision].push({
+      id: 'c_' + comision + '_' + (comisionesData[comision].length + 1),
+      inicio: '',
+      fin: '',
+      canal: '',
+      descripcion: ''
+    });
+  }
+  comisionesData[comision][index][field] = value;
+  scheduleSaveComisiones();
+}
+
+function agregarFilaComision(comision) {
+  if (!comisionesData[comision]) comisionesData[comision] = [];
+  comisionesData[comision].push({
+    id: 'c_' + comision + '_' + Date.now(),
+    inicio: '',
+    fin: '',
+    canal: '',
+    descripcion: ''
+  });
+  scheduleSaveComisiones();
+  renderComisionesUsuarios();
+}
+
+function eliminarFilaComision(comision, index) {
+  if (!comisionesData[comision] || !comisionesData[comision][index]) return;
+  if (confirm('¿Eliminar esta fila de la comisión ' + comision + '?')) {
+    comisionesData[comision].splice(index, 1);
+    if (comisionesData[comision].length === 0) {
+      comisionesData[comision].push({
+        id: 'c_' + comision + '_' + Date.now(),
+        inicio: '',
+        fin: '',
+        canal: '',
+        descripcion: ''
+      });
+    }
+    scheduleSaveComisiones();
+    renderComisionesUsuarios();
+  }
+}
+
+function agregarFilaComisionActual() {
+  if (comisionSeleccionada !== 'TODAS') {
+    agregarFilaComision(comisionSeleccionada);
+  } else {
+    agregarFilaComision('ATE');
+  }
+}
+
+function renderComisionesUsuarios() {
+  const table = document.getElementById('tablaComisiones');
+  if (!table) return;
+
+  const q = (document.getElementById('filtroComTexto')?.value || '').toLowerCase().trim();
+
+  if (comisionSeleccionada !== 'TODAS') {
+    // VISTA ENFOCADA EN UNA COMISIÓN ESPECÍFICA
+    const com = comisionSeleccionada;
+    let list = comisionesData[com] || [];
+    let rowsHtml = '';
+
+    list.forEach((item, idx) => {
+      const match = !q || (item.canal || '').toLowerCase().includes(q) || (item.descripcion || '').toLowerCase().includes(q);
+      if (!match) return;
+
+      rowsHtml += `<tr>
+        <td style="text-align:center;font-weight:700;color:var(--muted);width:38px">${idx + 1}</td>
+        <td style="width:140px">
+          <input type="date" class="com-date-input" value="${escapeComAttr(item.inicio)}" onchange="updateComisionField('${com}', ${idx}, 'inicio', this.value)" title="Fecha de Inicio">
+        </td>
+        <td style="width:140px">
+          <input type="date" class="com-date-input" value="${escapeComAttr(item.fin)}" onchange="updateComisionField('${com}', ${idx}, 'fin', this.value)" title="Fecha de Fin">
+        </td>
+        <td style="min-width:180px">
+          <input type="text" class="com-cell-input" value="${escapeComAttr(item.canal)}" placeholder="Nombre del canal..." oninput="updateComisionField('${com}', ${idx}, 'canal', this.value)">
+        </td>
+        <td style="min-width:280px">
+          <input type="text" class="com-cell-input" value="${escapeComAttr(item.descripcion)}" placeholder="Descripción / trabajo a realizar..." oninput="updateComisionField('${com}', ${idx}, 'descripcion', this.value)">
+        </td>
+        <td style="text-align:center;width:50px">
+          <button class="com-del-btn" title="Eliminar fila" onclick="eliminarFilaComision('${com}', ${idx})">🗑️</button>
+        </td>
+      </tr>`;
+    });
+
+    if (!rowsHtml) {
+      rowsHtml = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No se encontraron registros para la búsqueda.</td></tr>`;
+    }
+
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th colspan="6" class="main-title-th">COMISIONES DE USUARIOS — ${com}</th>
+        </tr>
+        <tr>
+          <th class="sub-th" style="width:38px">#</th>
+          <th class="sub-th" style="width:140px">📅 Inicio</th>
+          <th class="sub-th" style="width:140px">📅 Fin</th>
+          <th class="sub-th" style="min-width:180px">🌊 Canal</th>
+          <th class="sub-th" style="min-width:280px">📝 Descripción</th>
+          <th class="sub-th" style="width:50px">Acción</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6" style="text-align:center;background:var(--bg);padding:8px">
+            <button class="com-add-row-btn" onclick="agregarFilaComision('${com}')">➕ Agregar Fila a ${com}</button>
+          </td>
+        </tr>
+      </tfoot>
+    `;
+  } else {
+    // VISTA MATRIZ EXCEL COMPLETA (TODAS LAS 12 COMISIONES COMO EN LA IMAGEN)
+    const comCols = COMISIONES_LIST;
+    const maxRows = Math.max(3, ...comCols.map(c => (comisionesData[c] || []).length));
+
+    let thead = `
+      <tr>
+        <th colspan="${comCols.length * 4}" class="main-title-th">COMISIONES DE USUARIOS</th>
+      </tr>
+      <tr>
+        ${comCols.map(c => `<th colspan="4" class="com-name-th">${c}</th>`).join('')}
+      </tr>
+      <tr>
+        ${comCols.map(() => `
+          <th class="sub-th" style="width:130px">📅 Inicio</th>
+          <th class="sub-th" style="width:130px">📅 Fin</th>
+          <th class="sub-th" style="min-width:140px">🌊 Canal</th>
+          <th class="sub-th" style="min-width:200px">📝 Descripción</th>
+        `).join('')}
+      </tr>
+    `;
+
+    let tbody = '';
+    for (let r = 0; r < maxRows; r++) {
+      let tr = '<tr>';
+      comCols.forEach(c => {
+        const item = (comisionesData[c] && comisionesData[c][r]) ? comisionesData[c][r] : null;
+        if (item) {
+          const isMatch = !q || (item.canal || '').toLowerCase().includes(q) || (item.descripcion || '').toLowerCase().includes(q);
+          const cellBg = (q && isMatch) ? 'background:rgba(245,158,11,0.15);' : '';
+          tr += `
+            <td style="${cellBg}">
+              <input type="date" class="com-date-input" value="${escapeComAttr(item.inicio)}" onchange="updateComisionField('${c}', ${r}, 'inicio', this.value)" title="Fecha Inicio (${c})">
+            </td>
+            <td style="${cellBg}">
+              <input type="date" class="com-date-input" value="${escapeComAttr(item.fin)}" onchange="updateComisionField('${c}', ${r}, 'fin', this.value)" title="Fecha Fin (${c})">
+            </td>
+            <td style="${cellBg}">
+              <input type="text" class="com-cell-input" value="${escapeComAttr(item.canal)}" placeholder="Canal..." oninput="updateComisionField('${c}', ${r}, 'canal', this.value)">
+            </td>
+            <td style="${cellBg}">
+              <div style="display:flex;align-items:center;gap:3px">
+                <input type="text" class="com-cell-input" value="${escapeComAttr(item.descripcion)}" placeholder="Descripción..." oninput="updateComisionField('${c}', ${r}, 'descripcion', this.value)">
+                <button class="com-del-btn" title="Eliminar fila de ${c}" onclick="eliminarFilaComision('${c}', ${r})">🗑️</button>
+              </div>
+            </td>
+          `;
+        } else {
+          tr += `
+            <td style="background:var(--bg)"></td>
+            <td style="background:var(--bg)"></td>
+            <td style="background:var(--bg)"></td>
+            <td style="background:var(--bg)"></td>
+          `;
+        }
+      });
+      tr += '</tr>';
+      tbody += tr;
+    }
+
+    let tfoot = '<tr>';
+    comCols.forEach(c => {
+      tfoot += `
+        <td colspan="4" style="text-align:center;background:var(--bg);padding:6px">
+          <button class="com-add-row-btn" onclick="agregarFilaComision('${c}')">➕ Fila ${c}</button>
+        </td>
+      `;
+    });
+    tfoot += '</tr>';
+
+    table.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody><tfoot>${tfoot}</tfoot>`;
+  }
+}
+
+// EXPORTAR A EXCEL (.xlsx)
+function exportarComisionesExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Biblioteca Excel cargándose, reintente en un momento');
+    return;
+  }
+
+  const rows = [];
+  // Fila 1: Título general
+  const totalCols = COMISIONES_LIST.length * 4;
+  const titleRow = ['COMISIONES DE USUARIOS'];
+  for (let i = 1; i < totalCols; i++) titleRow.push('');
+  rows.push(titleRow);
+
+  // Fila 2: Nombres de Comisiones
+  const comRow = [];
+  COMISIONES_LIST.forEach(c => {
+    comRow.push(c, '', '', '');
+  });
+  rows.push(comRow);
+
+  // Fila 3: Subcolumnas
+  const subRow = [];
+  COMISIONES_LIST.forEach(() => {
+    subRow.push('Inicio', 'Fin', 'Canal', 'Descripción');
+  });
+  rows.push(subRow);
+
+  // Filas de datos
+  const maxRows = Math.max(1, ...COMISIONES_LIST.map(c => (comisionesData[c] || []).length));
+  for (let r = 0; r < maxRows; r++) {
+    const dataRow = [];
+    COMISIONES_LIST.forEach(c => {
+      const item = (comisionesData[c] && comisionesData[c][r]) ? comisionesData[c][r] : null;
+      if (item) {
+        dataRow.push(item.inicio || '', item.fin || '', item.canal || '', item.descripcion || '');
+      } else {
+        dataRow.push('', '', '', '');
+      }
+    });
+    rows.push(dataRow);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Merges para el encabezado idéntico a Excel
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }
+  ];
+  COMISIONES_LIST.forEach((c, idx) => {
+    const colStart = idx * 4;
+    ws['!merges'].push({ s: { r: 1, c: colStart }, e: { r: 1, c: colStart + 3 } });
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Comisiones Usuarios');
+  XLSX.writeFile(wb, 'Comisiones_de_Usuarios_JUSHMRCB.xlsx');
+}
+
+// IMPRIMIR / PDF
+function imprimirComisionesPDF() {
+  window.print();
+}
+
+
 loadExpedientesFromFirebase();
+loadComisionesFromFirebase();
 
 // ===== LOGIN =====
 const USERS = [
